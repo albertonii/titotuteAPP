@@ -28,7 +28,14 @@ interface ExerciseLogFormState {
   notes: string;
 }
 
-const MICRO_INDEXES = [2, 4, 6, 8, 10, 12];
+const MICRO_INDEXES = [2, 4, 6, 8, 10, 12] as const;
+const TRAINING_KEYS_ORDER = [
+  "ENTRENAMIENTO A",
+  "ENTRENAMIENTO B",
+  "ENTRENAMIENTO C",
+  "ENTRENAMIENTO D",
+  "ENTRENAMIENTO E",
+] as const;
 
 function getColumnIndex(selectedIndex: number, offset: number) {
   const base = MICRO_INDEXES[selectedIndex] ?? 2;
@@ -104,7 +111,7 @@ function ExerciseCard({
     notes: "",
   });
   const microcycle = training.microcycles[selectedIndex];
-  const { logs, refresh } = useExerciseLogs(
+  const { logs, loading, refresh } = useExerciseLogs(
     userId,
     training.sheet,
     exercise.name,
@@ -112,6 +119,85 @@ function ExerciseCard({
   );
 
   const lastLog = logs[0];
+
+  const parseMetricValue = (value?: string | null) => {
+    if (!value) return null;
+    const normalized = value.replace(",", ".").match(/-?\d+(\.\d+)?/);
+    if (!normalized) return null;
+    const numeric = Number.parseFloat(normalized[0]);
+    return Number.isFinite(numeric) ? numeric : null;
+  };
+
+  const formatDelta = (current?: string | null, previous?: string | null) => {
+    const currentNum = parseMetricValue(current);
+    const prevNum = parseMetricValue(previous);
+    if (currentNum === null || prevNum === null) return null;
+    const diff = currentNum - prevNum;
+    if (Math.abs(diff) < 0.05) return "≈";
+    const rounded =
+      Math.abs(diff) < 1 ? Math.round(diff * 10) / 10 : Math.round(diff);
+    return `${diff > 0 ? "+" : "-"}${Math.abs(rounded)}`;
+  };
+
+  const deltaTone = (delta?: string | null) => {
+    if (!delta) return "text-slate-400";
+    if (delta === "≈") return "text-amber-500";
+    if (delta.startsWith("+")) return "text-emerald-600";
+    return "text-rose-500";
+  };
+
+  const groupedHistory = useMemo(() => {
+    if (!logs.length) return [];
+    const groups: Array<{
+      key: string;
+      label: string;
+      microcycle?: string | null;
+      entries: Array<{
+        log: ExerciseLog;
+        time: string;
+        deltas: {
+          load?: string | null;
+          reps?: string | null;
+          rir?: string | null;
+        };
+      }>;
+    }> = [];
+
+    logs.forEach((log, index) => {
+      const performedAt = new Date(log.performed_at);
+      const dateKey = performedAt.toISOString().split("T")[0];
+      const key = `${dateKey}-${log.microcycle ?? ""}`;
+      let group = groups.find((item) => item.key === key);
+      if (!group) {
+        group = {
+          key,
+          label: performedAt.toLocaleDateString("es-ES", {
+            weekday: "long",
+            day: "numeric",
+            month: "short",
+          }),
+          microcycle: log.microcycle,
+          entries: [],
+        };
+        groups.push(group);
+      }
+      const previous = logs[index + 1];
+      group.entries.push({
+        log,
+        time: performedAt.toLocaleTimeString("es-ES", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        deltas: {
+          load: formatDelta(log.load, previous?.load),
+          reps: formatDelta(log.reps, previous?.reps),
+          rir: formatDelta(log.rir, previous?.rir),
+        },
+      });
+    });
+
+    return groups;
+  }, [logs]);
 
   const handleChange =
     (field: keyof ExerciseLogFormState) =>
@@ -148,58 +234,115 @@ function ExerciseCard({
   };
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-white/80 p-4 shadow-sm">
-      <header className="mb-3 flex flex-col gap-1">
-        <h3 className="text-lg font-semibold text-slate-900">
-          {exercise.name}
-        </h3>
-        <p className="text-sm text-slate-500">Microciclo {microcycle}</p>
-      </header>
-
-      <div className="grid gap-2">
-        <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-          <dl className="grid grid-cols-2 gap-3 text-sm">
+    <details className="group rounded-2xl border border-slate-200 bg-white/90 shadow-sm transition hover:border-brand-primary/40 hover:shadow-md">
+      <summary className="flex cursor-pointer select-none flex-col gap-3 rounded-2xl px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/50 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex w-full flex-col gap-1">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <dt className="text-slate-500">Objetivo</dt>
-              <dd className="font-medium text-slate-800">
-                {getValue(exercise.header, selectedIndex) ?? "—"}
-              </dd>
+              <h3 className="text-lg font-semibold text-slate-900">
+                {exercise.name}
+              </h3>
+              <p className="text-xs font-medium uppercase tracking-wide text-brand-primary">
+                Microciclo {microcycle}
+              </p>
             </div>
-            <div>
-              <dt className="text-slate-500">Descanso</dt>
-              <dd className="font-medium text-slate-800">
-                {getValue(exercise.rest, selectedIndex) ?? "—"}
-              </dd>
+            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
+              {logs.length > 0 ? `${logs.length} registros` : "Sin registros"}
             </div>
-          </dl>
-          <ul className="mt-3 space-y-1 text-sm text-slate-600">
-            {exercise.notes.map((row, index) => {
-              const label = row[1];
-              const info = getValue(row, selectedIndex);
-              const extra = getValue(row, selectedIndex, 1);
-              if (!label && !info && !extra) return null;
-              return (
-                <li key={index} className="flex flex-col">
-                  {label ? (
-                    <span className="font-medium text-slate-700">{label}</span>
-                  ) : null}
-                  <span>
-                    {[info, extra].filter(Boolean).join(" · ") || null}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+          </div>
+          {lastLog ? (
+            <div className="flex flex-wrap gap-2 text-xs text-slate-600">
+              <span className="flex items-center gap-2 font-medium text-slate-700">
+                Último:
+                <span className="rounded-full bg-brand-primary/10 px-2 py-0.5 text-[11px] font-semibold text-brand-primary">
+                  {new Date(lastLog.performed_at).toLocaleDateString("es-ES", {
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </span>
+              </span>
+              <span className="truncate">
+                {[lastLog.load, lastLog.reps, lastLog.rir]
+                  .filter(Boolean)
+                  .join(" · ") || "Sin datos"}
+              </span>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500">
+              Toca para ver indicaciones y registrar tus datos.
+            </p>
+          )}
         </div>
+        <span className="hidden shrink-0 text-lg text-slate-400 transition group-open:rotate-180 sm:block">
+          ▼
+        </span>
+      </summary>
+
+      <div className="grid gap-4 border-t border-slate-200 px-4 pb-4 pt-3">
+        <details
+          className="group rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3 text-sm shadow-inner"
+          open
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-slate-700 transition group-open:text-brand-primary">
+            Plan de trabajo
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-400 group-open:text-brand-primary">
+              ver detalles
+            </span>
+          </summary>
+          <div className="mt-3 space-y-3 text-sm text-slate-600">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Objetivo
+                </p>
+                <p className="font-semibold text-slate-800">
+                  {getValue(exercise.header, selectedIndex) ?? "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Descanso
+                </p>
+                <p className="font-semibold text-slate-800">
+                  {getValue(exercise.rest, selectedIndex) ?? "—"}
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              {exercise.notes.map((row, index) => {
+                const label = row[1];
+                const info = getValue(row, selectedIndex);
+                const extra = getValue(row, selectedIndex, 1);
+                if (!label && !info && !extra) return null;
+                return (
+                  <div
+                    key={`${exercise.name}-note-${index}`}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm"
+                  >
+                    {label ? (
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {label}
+                      </p>
+                    ) : null}
+                    <p className="text-sm text-slate-600">
+                      {[info, extra].filter(Boolean).join(" · ") || null}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </details>
 
         {exercise.series.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
             <table className="w-full min-w-[320px] text-sm">
-              <thead>
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr className="text-left text-slate-500">
-                  <th className="px-2 py-1">Serie</th>
-                  <th className="px-2 py-1">Carga</th>
-                  <th className="px-2 py-1">Reps / Indicaciones</th>
+                  <th className="px-2 py-2">Serie</th>
+                  <th className="px-2 py-2">Carga</th>
+                  <th className="px-2 py-2">Reps / Indicaciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -209,13 +352,13 @@ function ExerciseCard({
                   const repetitions = getValue(row, selectedIndex, 1);
                   return (
                     <tr key={`${exercise.name}-series-${label ?? index}`}>
-                      <td className="px-2 py-1 font-medium text-slate-700">
+                      <td className="px-2 py-2 font-medium text-slate-700">
                         {label}
                       </td>
-                      <td className="px-2 py-1 text-slate-800">
+                      <td className="px-2 py-2 text-slate-800">
                         {load ?? "—"}
                       </td>
-                      <td className="px-2 py-1 text-slate-800">
+                      <td className="px-2 py-2 text-slate-800">
                         {repetitions ?? "—"}
                       </td>
                     </tr>
@@ -227,10 +370,10 @@ function ExerciseCard({
         ) : null}
       </div>
 
-      <footer className="mt-4 grid gap-3 border-t border-slate-200 pt-4">
+      <footer className="mt-4 grid gap-4 border-t border-slate-200 pt-4">
         <form
           onSubmit={handleSubmit}
-          className="grid gap-3 sm:grid-cols-4 sm:items-end"
+          className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3 sm:grid-cols-4 sm:items-end"
         >
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-slate-600">Carga / Peso</span>
@@ -278,31 +421,115 @@ function ExerciseCard({
           </div>
         </form>
 
-        <div className="rounded border border-slate-200 bg-slate-50 p-3">
+        <div className="rounded-xl border border-slate-200 bg-white/80 p-3">
           <h4 className="text-sm font-semibold text-slate-700">
-            Últimos registros
+            Historial reciente
           </h4>
-          {lastLog ? (
-            <ul className="mt-2 space-y-1 text-sm text-slate-600">
-              {logs.slice(0, 3).map((log) => (
-                <li key={log.id} className="flex flex-col">
-                  <span className="text-slate-700">
-                    {new Date(log.performed_at).toLocaleString("es-ES", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
-                  </span>
-                  <span>
-                    {[log.load, log.reps, log.rir]
-                      .filter(Boolean)
-                      .join(" · ") || "Sin datos"}
-                  </span>
-                  {log.notes ? (
-                    <span className="text-xs text-slate-500">{log.notes}</span>
-                  ) : null}
-                </li>
+          {loading ? (
+            <p className="mt-2 text-sm text-slate-400 animate-pulse">
+              Cargando registros...
+            </p>
+          ) : groupedHistory.length > 0 ? (
+            <div className="mt-3 flex flex-col gap-3 text-sm text-slate-600">
+              {groupedHistory.slice(0, 4).map((group) => (
+                <div
+                  key={group.key}
+                  className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-semibold text-slate-700 capitalize">
+                      {group.label}
+                    </span>
+                    {group.microcycle ? (
+                      <span className="rounded-full bg-brand-primary/10 px-2 py-0.5 text-xs font-semibold text-brand-primary">
+                        {group.microcycle}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-3 flex flex-col gap-3">
+                    {group.entries.map(({ log, time, deltas }) => (
+                      <div
+                        key={log.id}
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-2"
+                      >
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span className="font-semibold text-slate-600">
+                            Sesión • {time}
+                          </span>
+                          {log.microcycle ? (
+                            <span className="text-[10px] uppercase tracking-wide text-slate-400">
+                              {log.microcycle}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                          <div className="rounded-lg bg-slate-50 px-2 py-2">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                              Carga
+                            </p>
+                            <p className="text-sm font-semibold text-slate-700">
+                              {log.load ?? "—"}
+                            </p>
+                            {deltas.load ? (
+                              <p
+                                className={`text-xs font-semibold ${deltaTone(
+                                  deltas.load
+                                )}`}
+                              >
+                                {deltas.load}
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="rounded-lg bg-slate-50 px-2 py-2">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                              Reps / Indicaciones
+                            </p>
+                            <p className="text-sm font-semibold text-slate-700">
+                              {log.reps ?? "—"}
+                            </p>
+                            {deltas.reps ? (
+                              <p
+                                className={`text-xs font-semibold ${deltaTone(
+                                  deltas.reps
+                                )}`}
+                              >
+                                {deltas.reps}
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="rounded-lg bg-slate-50 px-2 py-2">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                              RIR / Sensación
+                            </p>
+                            <p className="text-sm font-semibold text-slate-700">
+                              {log.rir ?? "—"}
+                            </p>
+                            {deltas.rir ? (
+                              <p
+                                className={`text-xs font-semibold ${deltaTone(
+                                  deltas.rir
+                                )}`}
+                              >
+                                {deltas.rir}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                        {log.notes ? (
+                          <p className="mt-2 text-xs italic text-slate-500">
+                            “
+                            {log.notes.length > 160
+                              ? `${log.notes.slice(0, 157)}…`
+                              : log.notes}
+                            ”
+                          </p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           ) : (
             <p className="mt-2 text-sm text-slate-500">
               Aún no tienes registros para este ejercicio.
@@ -310,13 +537,22 @@ function ExerciseCard({
           )}
         </div>
       </footer>
-    </article>
+    </details>
   );
 }
 
 export default function TrainingPlanner({ trainings }: TrainingPlannerProps) {
-  const sheets = useMemo(() => Object.keys(trainings), [trainings]);
-  const defaultSheet = sheets[0];
+  const sheetKeys = useMemo(() => {
+    const keys = Object.keys(trainings);
+    const ordered = TRAINING_KEYS_ORDER.filter((key) =>
+      keys.includes(key)
+    ) as string[];
+    const remaining = keys.filter(
+      (key) => !TRAINING_KEYS_ORDER.includes(key as any)
+    );
+    return [...ordered, ...remaining];
+  }, [trainings]);
+  const defaultSheet = sheetKeys[0] ?? "";
   const [selectedSheet, setSelectedSheet] = useState<string>(defaultSheet);
   const [selectedMicro, setSelectedMicro] = useState<number>(0);
   const { user } = useAuthStore();
@@ -339,68 +575,110 @@ export default function TrainingPlanner({ trainings }: TrainingPlannerProps) {
 
   return (
     <section className="flex flex-col gap-6 py-6">
-      <header className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-center gap-4">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-500">Entrenamiento</span>
-            <select
-              value={selectedSheet}
-              onChange={(event) => setSelectedSheet(event.target.value)}
-              className="rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring focus:ring-brand-primary/50"
-            >
-              {sheets.map((sheet) => (
-                <option key={sheet} value={sheet}>
-                  {sheet}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-500">Microciclo</span>
-            <select
-              value={selectedMicro}
-              onChange={(event) => setSelectedMicro(Number(event.target.value))}
-              className="rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring focus:ring-brand-primary/50"
-            >
-              {training.microcycles.map((micro, index) => (
-                <option key={micro} value={index}>
-                  {micro}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="mt-4">
+      <header className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-sm">
+        <div className="flex flex-col gap-3">
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary">
+            Plan de trabajo
+          </span>
           <h1 className="text-2xl font-semibold text-brand-primary">
             {training.title}
           </h1>
-          {training.phase ? (
-            <p className="text-sm text-slate-600">Fase: {training.phase}</p>
-          ) : null}
+          <p className="text-sm text-slate-500">
+            Selecciona el entrenamiento asignado y registra tus resultados. Cada
+            microciclo representa una semana dentro de este mesociclo.
+          </p>
+        </div>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-slate-700">
+              Entrenamientos disponibles
+            </h2>
+            {training.phase ? (
+              <span className="rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold text-brand-primary">
+                {training.phase}
+              </span>
+            ) : null}
+          </div>
+          <div className="flex w-full gap-2 overflow-x-auto pb-1">
+            {sheetKeys.map((sheet) => {
+              const isActive = sheet === selectedSheet;
+              return (
+                <button
+                  key={sheet}
+                  type="button"
+                  onClick={() => {
+                    setSelectedSheet(sheet);
+                    setSelectedMicro(0);
+                  }}
+                  className={
+                    "whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition " +
+                    (isActive
+                      ? "border-brand-primary bg-brand-primary text-white shadow"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary")
+                  }
+                >
+                  {sheet.replace("ENTRENAMIENTO ", "Entrenamiento ")}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-semibold text-slate-700">
+            Microciclo (semana)
+          </p>
+          <div className="flex w-full gap-2 overflow-x-auto pb-1">
+            {training.microcycles.map((micro, index) => {
+              const isActive = selectedMicro === index;
+              return (
+                <button
+                  key={micro}
+                  type="button"
+                  onClick={() => setSelectedMicro(index)}
+                  className={
+                    "rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide transition " +
+                    (isActive
+                      ? "bg-brand-primary text-white shadow"
+                      : "bg-slate-100 text-slate-600 hover:bg-brand-primary/10 hover:text-brand-primary")
+                  }
+                >
+                  {micro}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </header>
 
       {training.warmups.length > 0 ? (
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">
             Calentamiento
           </h2>
-          <ul className="mt-3 space-y-2 text-sm text-slate-600">
+          <ul className="mt-4 space-y-3 text-sm text-slate-600">
             {training.warmups.map((warmup, index) => (
-              <li key={index} className="flex flex-col">
-                <span className="font-medium text-slate-700">
-                  {warmup.description}
+              <li
+                key={`${warmup.description}-${index}`}
+                className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3"
+              >
+                <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-xs font-semibold text-brand-primary">
+                  {index + 1}
                 </span>
-                {warmup.resource ? (
-                  <a
-                    href={warmup.resource}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-brand-primary underline"
-                  >
-                    Ver referencia
-                  </a>
-                ) : null}
+                <div className="flex flex-col gap-2">
+                  <span className="font-medium text-slate-700">
+                    {warmup.description}
+                  </span>
+                  {warmup.resource ? (
+                    <a
+                      href={warmup.resource}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex w-fit items-center gap-1 text-xs font-semibold text-brand-primary underline underline-offset-4"
+                    >
+                      Vídeo / Referencia
+                    </a>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>
