@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import {
   db,
   type Macrocycle,
@@ -102,6 +103,9 @@ interface SessionFormState {
   status: SessionStatus;
   notes: string;
 }
+
+type MacrocycleSummary = Macrocycle & { duration: string };
+type MesocycleSummary = Mesocycle & { duration: string };
 
 const DEFAULT_MACROCYCLE_FORM: MacrocycleFormState = {
   name: "",
@@ -834,7 +838,7 @@ export function AdminPlanningManager() {
     resetSessionForm();
   };
 
-  const macrocycleSummary = useMemo(() => {
+  const macrocycleSummary = useMemo<MacrocycleSummary[]>(() => {
     return macrocycles.map((macro) => ({
       ...macro,
       duration: `${formatShortDate(macro.start_date)} – ${formatShortDate(
@@ -843,7 +847,7 @@ export function AdminPlanningManager() {
     }));
   }, [macrocycles]);
 
-  const mesocycleSummary = useMemo(() => {
+  const mesocycleSummary = useMemo<MesocycleSummary[]>(() => {
     return mesocycles.map((meso) => ({
       ...meso,
       duration: `${formatShortDate(meso.start_date)} – ${formatShortDate(
@@ -903,731 +907,1259 @@ export function AdminPlanningManager() {
 
   const isEditorOpen = Boolean(editor);
 
-  return (
-    <section className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <header className="flex flex-col gap-2">
-        <h2 className="text-xl font-semibold text-slate-900">
-          Planificación deportiva
-        </h2>
-        <p className="text-sm text-slate-600">
-          Estructura la temporada creando macrociclos, mesociclos, microciclos y
-          sesiones. Cada cambio queda listo para sincronizar con Supabase y
-          mantener a tu staff alineado, incluso sin conexión.
-        </p>
-        {feedback ? (
-          <span className="text-xs font-medium text-brand-primary/90">
-            {feedback}
-          </span>
-        ) : null}
-      </header>
+  const renderEditorForm = () => {
+    if (!editor) return null;
 
-      <article className="flex flex-col gap-4 rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-        <header className="flex items-center justify-between gap-4">
-          <div className="flex flex-col">
-            <h3 className="text-lg font-semibold text-slate-900">
-              Macrociclos
-            </h3>
-            <p className="text-xs text-slate-500">
-              Define temporadas completas y sus metas generales.
-            </p>
-          </div>
-        </header>
+    const submitLabel = (defaultLabel: string, editLabel: string) =>
+      editor.mode === "edit" ? editLabel : defaultLabel;
 
-        <div className="flex flex-col gap-4">
-          <ul className="flex flex-col gap-3">
-            {macrocycleSummary.length === 0 ? (
-              <li className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
-                No hay macrociclos aún. Crea el primero para comenzar.
-              </li>
-            ) : (
-              macrocycleSummary.map((macrocycle) => {
-                const isSelected = macrocycle.id === selectedMacrocycleId;
-                return (
-                  <li
-                    key={macrocycle.id}
-                    className={`flex flex-col gap-3 rounded-lg border bg-white p-4 text-sm shadow-sm transition hover:border-brand-primary/40 hover:shadow-md ${
-                      isSelected
-                        ? "border-brand-primary/60 ring-2 ring-brand-primary/20"
-                        : "border-slate-200"
-                    }`}
-                  >
-                    <div className="flex flex-col gap-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleSelectMacrocycle(macrocycle.id)}
-                          className="text-left text-base font-semibold text-slate-900"
-                        >
-                          {macrocycle.name}
-                        </button>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                            planningStatusStyle[macrocycle.status]
-                          }`}
-                        >
-                          {planningStatusLabel[macrocycle.status]}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                        <span>{macrocycle.duration}</span>
-                        {macrocycle.season ? (
-                          <span>· {macrocycle.season}</span>
-                        ) : null}
-                      </div>
-                      {macrocycle.goal ? (
-                        <p className="text-xs text-slate-600">
-                          Objetivo: {macrocycle.goal}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="flex items-center justify-end gap-2 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => startMacroEdit(macrocycle)}
-                        className="rounded border border-slate-200 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (
-                            window.confirm(
-                              "¿Eliminar este macrociclo y su contenido?"
-                            )
-                          ) {
-                            try {
-                              await deleteMacrocycle(macrocycle.id);
-                              if (selectedMacrocycleId === macrocycle.id) {
-                                setSelectedMacrocycleId(null);
-                                setSelectedMesocycleId(null);
-                                setSelectedMicrocycleId(null);
-                              }
-                              await Promise.all([
-                                refreshMacrocycles(),
-                                refreshMesocycles(),
-                                refreshMicrocycles(),
-                                refreshSessions(),
-                              ]);
-                              setFeedback("Macrociclo eliminado.");
-                            } catch (error) {
-                              console.error(error);
-                              setFeedback(
-                                error instanceof Error
-                                  ? error.message
-                                  : "No se pudo eliminar el macrociclo."
-                              );
-                            }
-                          }
-                        }}
-                        className="rounded border border-rose-200 px-3 py-1 font-medium text-rose-600 transition hover:border-rose-300 hover:text-rose-700"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-        </div>
-      </article>
-
-      {selectedMacrocycleId ? (
-        <article className="flex flex-col gap-4 rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-          <header className="flex items-center justify-between gap-4">
-            <div className="flex flex-col">
-              <h3 className="text-lg font-semibold text-slate-900">
-                Mesociclos
-              </h3>
-              <p className="text-xs text-slate-500">
-                Descompón el macrociclo en fases concretas.
-              </p>
+    switch (editor.type) {
+      case "macrocycle":
+        return (
+          <form
+            onSubmit={handleMacroSubmit}
+            className="flex flex-col gap-4 p-4 text-sm"
+          >
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Nombre
+                </span>
+                <input
+                  required
+                  value={macroForm.name}
+                  onChange={(event) =>
+                    setMacroForm((prev) => ({
+                      ...prev,
+                      name: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                  placeholder="Temporada 2025"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Temporada
+                </span>
+                <input
+                  value={macroForm.season}
+                  onChange={(event) =>
+                    setMacroForm((prev) => ({
+                      ...prev,
+                      season: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                  placeholder="2025-2026"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Inicio
+                </span>
+                <input
+                  type="date"
+                  required
+                  value={macroForm.start_date}
+                  onChange={(event) =>
+                    setMacroForm((prev) => ({
+                      ...prev,
+                      start_date: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Fin
+                </span>
+                <input
+                  type="date"
+                  required
+                  value={macroForm.end_date}
+                  onChange={(event) =>
+                    setMacroForm((prev) => ({
+                      ...prev,
+                      end_date: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                />
+              </label>
+              <label className="flex flex-col gap-1 md:col-span-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Objetivo
+                </span>
+                <input
+                  value={macroForm.goal}
+                  onChange={(event) =>
+                    setMacroForm((prev) => ({
+                      ...prev,
+                      goal: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                  placeholder="Preparación para competencia regional"
+                />
+              </label>
+              <label className="flex flex-col gap-1 md:col-span-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Notas
+                </span>
+                <textarea
+                  value={macroForm.notes}
+                  onChange={(event) =>
+                    setMacroForm((prev) => ({
+                      ...prev,
+                      notes: event.target.value,
+                    }))
+                  }
+                  className="min-h-[80px] rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                  placeholder="Lineamientos generales, hitos, recordatorios"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Estado
+                </span>
+                <select
+                  value={macroForm.status}
+                  onChange={(event) =>
+                    setMacroForm((prev) => ({
+                      ...prev,
+                      status: event.target.value as PlanningStatus,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                >
+                  {Object.entries(planningStatusLabel).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
-          </header>
-
-          <ul className="flex flex-col gap-3">
-            {mesocycleSummary.length === 0 ? (
-              <li className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
-                Selecciona o crea un mesociclo para continuar.
-              </li>
-            ) : (
-              mesocycleSummary.map((mesocycle) => {
-                const isSelected = mesocycle.id === selectedMesocycleId;
-                return (
-                  <li
-                    key={mesocycle.id}
-                    className={`flex flex-col gap-3 rounded-lg border bg-white p-4 text-sm shadow-sm transition hover:border-brand-primary/40 hover:shadow-md ${
-                      isSelected
-                        ? "border-brand-primary/60 ring-2 ring-brand-primary/20"
-                        : "border-slate-200"
-                    }`}
-                  >
-                    <div className="flex flex-col gap-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleSelectMesocycle(mesocycle.id)}
-                          className="text-left text-base font-semibold text-slate-900"
-                        >
-                          {mesocycle.name}
-                        </button>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                            planningStatusStyle[mesocycle.status]
-                          }`}
-                        >
-                          {planningStatusLabel[mesocycle.status]}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                        <span>{mesocycle.duration}</span>
-                        {typeof mesocycle.order_index === "number" ? (
-                          <span>· Orden {mesocycle.order_index}</span>
-                        ) : null}
-                        {mesocycle.focus ? (
-                          <span>· {mesocycle.focus}</span>
-                        ) : null}
-                      </div>
-                      {mesocycle.goal ? (
-                        <p className="text-xs text-slate-600">
-                          Objetivo: {mesocycle.goal}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="flex items-center justify-end gap-2 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => startMesocycleEdit(mesocycle)}
-                        className="rounded border border-slate-200 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (
-                            window.confirm(
-                              "¿Eliminar este mesociclo y sus microciclos?"
-                            )
-                          ) {
-                            try {
-                              await deleteMesocycle(mesocycle.id);
-                              if (selectedMesocycleId === mesocycle.id) {
-                                setSelectedMesocycleId(null);
-                                setSelectedMicrocycleId(null);
-                              }
-                              await Promise.all([
-                                refreshMesocycles(),
-                                refreshMicrocycles(),
-                                refreshSessions(),
-                              ]);
-                              setFeedback("Mesociclo eliminado.");
-                            } catch (error) {
-                              console.error(error);
-                              setFeedback(
-                                error instanceof Error
-                                  ? error.message
-                                  : "No se pudo eliminar el mesociclo."
-                              );
-                            }
-                          }
-                        }}
-                        className="rounded border border-rose-200 px-3 py-1 font-medium text-rose-600 transition hover:border-rose-300 hover:text-rose-700"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-        </article>
-      ) : null}
-
-      {selectedMesocycleId ? (
-        <article className="flex flex-col gap-4 rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-          <header className="flex items-center justify-between gap-4">
-            <div className="flex flex-col">
-              <h3 className="text-lg font-semibold text-slate-900">
-                Microciclos
-              </h3>
-              <p className="text-xs text-slate-500">
-                Detalla la planificación semanal asociada al mesociclo.
-              </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleCloseEditor}
+                className="rounded border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="rounded bg-brand-primary px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-brand-accent"
+              >
+                {submitLabel("Crear macrociclo", "Guardar cambios")}
+              </button>
             </div>
-          </header>
-
+          </form>
+        );
+      case "mesocycle":
+        return (
+          <form
+            onSubmit={handleMesocycleSubmit}
+            className="flex flex-col gap-4 p-4 text-sm"
+          >
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Nombre
+                </span>
+                <input
+                  required
+                  value={mesoForm.name}
+                  onChange={(event) =>
+                    setMesoForm((prev) => ({
+                      ...prev,
+                      name: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                  placeholder="Fase de acumulación"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Orden
+                </span>
+                <input
+                  type="number"
+                  value={mesoForm.order_index}
+                  onChange={(event) =>
+                    setMesoForm((prev) => ({
+                      ...prev,
+                      order_index: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline:none focus:ring-2 focus:ring-brand-primary/40"
+                  min={0}
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Inicio
+                </span>
+                <input
+                  type="date"
+                  required
+                  value={mesoForm.start_date}
+                  onChange={(event) =>
+                    setMesoForm((prev) => ({
+                      ...prev,
+                      start_date: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline:none focus:ring-2 focus:ring-brand-primary/40"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Fin
+                </span>
+                <input
+                  type="date"
+                  required
+                  value={mesoForm.end_date}
+                  onChange={(event) =>
+                    setMesoForm((prev) => ({
+                      ...prev,
+                      end_date: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline:none focus:ring-2 focus:ring-brand-primary/40"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Fase
+                </span>
+                <input
+                  value={mesoForm.phase}
+                  onChange={(event) =>
+                    setMesoForm((prev) => ({
+                      ...prev,
+                      phase: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline:none focus:ring-2 focus:ring-brand-primary/40"
+                  placeholder="Acumulación, intensificación, taper..."
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Enfoque
+                </span>
+                <input
+                  value={mesoForm.focus}
+                  onChange={(event) =>
+                    setMesoForm((prev) => ({
+                      ...prev,
+                      focus: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline:none focus:ring-2 focus:ring-brand-primary/40"
+                  placeholder="Fuerza máxima, potencia..."
+                />
+              </label>
+              <label className="flex flex-col gap-1 md:col-span-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Objetivo
+                </span>
+                <input
+                  value={mesoForm.goal}
+                  onChange={(event) =>
+                    setMesoForm((prev) => ({
+                      ...prev,
+                      goal: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline:none focus:ring-2 focus:ring-brand-primary/40"
+                  placeholder="Metas específicas de la fase"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Estado
+                </span>
+                <select
+                  value={mesoForm.status}
+                  onChange={(event) =>
+                    setMesoForm((prev) => ({
+                      ...prev,
+                      status: event.target.value as PlanningStatus,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline:none focus:ring-2 focus:ring-brand-primary/40"
+                >
+                  {Object.entries(planningStatusLabel).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleCloseEditor}
+                className="rounded border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="rounded bg-brand-primary px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-brand-accent"
+              >
+                {submitLabel("Crear mesociclo", "Guardar cambios")}
+              </button>
+            </div>
+          </form>
+        );
+      case "microcycle":
+        return (
           <form
             onSubmit={handleMicrocycleSubmit}
-            className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm shadow-sm md:grid-cols-2"
+            className="flex flex-col gap-4 p-4 text-sm"
           >
-            <label className="flex flex-col gap-1">
-              <span>Nombre</span>
-              <input
-                required
-                value={microForm.name}
-                onChange={(event) =>
-                  setMicroForm((prev) => ({
-                    ...prev,
-                    name: event.target.value,
-                  }))
-                }
-                className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-                placeholder="Semana 1 - Base"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Semana</span>
-              <input
-                type="number"
-                min={1}
-                required
-                value={microForm.week_number}
-                onChange={(event) =>
-                  setMicroForm((prev) => ({
-                    ...prev,
-                    week_number: event.target.value,
-                  }))
-                }
-                className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Inicio (opcional)</span>
-              <input
-                type="date"
-                value={microForm.start_date}
-                onChange={(event) =>
-                  setMicroForm((prev) => ({
-                    ...prev,
-                    start_date: event.target.value,
-                  }))
-                }
-                className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Fin (opcional)</span>
-              <input
-                type="date"
-                value={microForm.end_date}
-                onChange={(event) =>
-                  setMicroForm((prev) => ({
-                    ...prev,
-                    end_date: event.target.value,
-                  }))
-                }
-                className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Enfoque</span>
-              <input
-                value={microForm.focus}
-                onChange={(event) =>
-                  setMicroForm((prev) => ({
-                    ...prev,
-                    focus: event.target.value,
-                  }))
-                }
-                className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-                placeholder="Volumen, técnica, recuperación..."
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Carga</span>
-              <input
-                value={microForm.load}
-                onChange={(event) =>
-                  setMicroForm((prev) => ({
-                    ...prev,
-                    load: event.target.value,
-                  }))
-                }
-                className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-                placeholder="Alta, media, baja..."
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Estado</span>
-              <select
-                value={microForm.status}
-                onChange={(event) =>
-                  setMicroForm((prev) => ({
-                    ...prev,
-                    status: event.target.value as PlanningStatus,
-                  }))
-                }
-                className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-              >
-                {Object.entries(planningStatusLabel).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="flex items-center justify-end gap-2 md:col-span-2">
-              {editingMicrocycleId ? (
-                <button
-                  type="button"
-                  onClick={resetMicrocycleForm}
-                  className="rounded border border-slate-300 px-4 py-2 font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Nombre
+                </span>
+                <input
+                  required
+                  value={microForm.name}
+                  onChange={(event) =>
+                    setMicroForm((prev) => ({
+                      ...prev,
+                      name: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                  placeholder="Semana 1 - Base"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Semana
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  required
+                  value={microForm.week_number}
+                  onChange={(event) =>
+                    setMicroForm((prev) => ({
+                      ...prev,
+                      week_number: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Inicio (opcional)
+                </span>
+                <input
+                  type="date"
+                  value={microForm.start_date}
+                  onChange={(event) =>
+                    setMicroForm((prev) => ({
+                      ...prev,
+                      start_date: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Fin (opcional)
+                </span>
+                <input
+                  type="date"
+                  value={microForm.end_date}
+                  onChange={(event) =>
+                    setMicroForm((prev) => ({
+                      ...prev,
+                      end_date: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Enfoque
+                </span>
+                <input
+                  value={microForm.focus}
+                  onChange={(event) =>
+                    setMicroForm((prev) => ({
+                      ...prev,
+                      focus: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                  placeholder="Volumen, técnica, recuperación..."
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Carga
+                </span>
+                <input
+                  value={microForm.load}
+                  onChange={(event) =>
+                    setMicroForm((prev) => ({
+                      ...prev,
+                      load: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                  placeholder="Alta, media, baja..."
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Estado
+                </span>
+                <select
+                  value={microForm.status}
+                  onChange={(event) =>
+                    setMicroForm((prev) => ({
+                      ...prev,
+                      status: event.target.value as PlanningStatus,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
                 >
-                  Cancelar
-                </button>
-              ) : null}
+                  {Object.entries(planningStatusLabel).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleCloseEditor}
+                className="rounded border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+              >
+                Cancelar
+              </button>
               <button
                 type="submit"
-                className="rounded bg-brand-primary px-4 py-2 font-semibold text-white transition hover:bg-brand-accent"
+                className="rounded bg-brand-primary px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-brand-accent"
               >
-                {editingMicrocycleId
-                  ? "Actualizar microciclo"
-                  : "Crear microciclo"}
+                {submitLabel("Crear microciclo", "Guardar cambios")}
               </button>
             </div>
           </form>
+        );
+      case "session":
+        return (
+          <form
+            onSubmit={handleSessionSubmit}
+            className="flex flex-col gap-4 p-4 text-sm"
+          >
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="flex flex-col gap-1 md:col-span-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Título (opcional)
+                </span>
+                <input
+                  value={sessionForm.name}
+                  onChange={(event) =>
+                    setSessionForm((prev) => ({
+                      ...prev,
+                      name: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                  placeholder="Sesión de fuerza A"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Fecha
+                </span>
+                <input
+                  type="date"
+                  required
+                  value={sessionForm.date}
+                  onChange={(event) =>
+                    setSessionForm((prev) => ({
+                      ...prev,
+                      date: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Entrenamiento asignado
+                </span>
+                <select
+                  required
+                  value={sessionForm.session_type}
+                  onChange={(event) =>
+                    setSessionForm((prev) => ({
+                      ...prev,
+                      session_type: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                >
+                  <option value="">Selecciona un entrenamiento</option>
+                  {trainingSheets.map((sheet) => (
+                    <option key={sheet} value={sheet}>
+                      {sheet}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Responsable
+                </span>
+                <select
+                  value={sessionForm.trainer_id}
+                  onChange={(event) =>
+                    setSessionForm((prev) => ({
+                      ...prev,
+                      trainer_id: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                >
+                  <option value="">Sin asignar</option>
+                  {trainers.map((trainer) => (
+                    <option key={trainer.id} value={trainer.id}>
+                      {trainer.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Orden
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  value={sessionForm.order_index}
+                  onChange={(event) =>
+                    setSessionForm((prev) => ({
+                      ...prev,
+                      order_index: event.target.value,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Estado
+                </span>
+                <select
+                  value={sessionForm.status}
+                  onChange={(event) =>
+                    setSessionForm((prev) => ({
+                      ...prev,
+                      status: event.target.value as SessionStatus,
+                    }))
+                  }
+                  className="rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                >
+                  {Object.entries(sessionStatusLabel).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 md:col-span-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Notas
+                </span>
+                <textarea
+                  value={sessionForm.notes}
+                  onChange={(event) =>
+                    setSessionForm((prev) => ({
+                      ...prev,
+                      notes: event.target.value,
+                    }))
+                  }
+                  className="min-h-[80px] rounded border border-slate-300 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+                  placeholder="Indicaciones para atletas, recordatorios logísticos o métricas a controlar"
+                />
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleCloseEditor}
+                className="rounded border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="rounded bg-brand-primary px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-brand-accent"
+              >
+                {submitLabel("Crear sesión", "Guardar cambios")}
+              </button>
+            </div>
+          </form>
+        );
+      default:
+        return null;
+    }
+  };
 
-          <ul className="flex flex-col gap-3">
-            {microcycles.length === 0 ? (
-              <li className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
-                Añade microciclos semanales para detallar la planificación.
-              </li>
-            ) : (
-              microcycles.map((microcycle) => {
-                const isSelected = microcycle.id === selectedMicrocycleId;
-                return (
-                  <li
-                    key={microcycle.id}
-                    className={`flex flex-col gap-3 rounded-lg border bg-white p-4 text-sm shadow-sm transition hover:border-brand-primary/40 hover:shadow-md ${
-                      isSelected
-                        ? "border-brand-primary/60 ring-2 ring-brand-primary/20"
-                        : "border-slate-200"
-                    }`}
-                  >
-                    <div className="flex flex-col gap-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleSelectMicrocycle(microcycle.id)}
-                          className="text-left text-base font-semibold text-slate-900"
-                        >
-                          {microcycle.name}
-                        </button>
+  return (
+    <>
+      <section className="relative flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <header className="flex flex-col gap-2">
+          <h2 className="text-xl font-semibold text-slate-900">
+            Planificación deportiva
+          </h2>
+          <p className="text-sm text-slate-600">
+            Estructura la temporada replicando la lógica del Excel. Duplica,
+            reordena y personaliza cada nivel con un flujo móvil y desktop.
+          </p>
+          {feedback ? (
+            <span className="text-xs font-medium text-brand-primary/90">
+              {feedback}
+            </span>
+          ) : null}
+        </header>
+
+        <div className="flex flex-col gap-4 xl:grid xl:grid-cols-4 xl:gap-5">
+          <section className="flex h-full flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm">
+            <header className="flex items-start justify-between gap-2">
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Temporadas
+                </span>
+                <h3 className="text-base font-semibold text-slate-900">
+                  Macrociclos
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={openCreateMacrocycle}
+                className="rounded-full border border-dashed border-brand-primary/60 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-brand-primary transition hover:bg-brand-primary/10"
+              >
+                + Nuevo
+              </button>
+            </header>
+            <p className="text-xs text-slate-500">
+              {macrocycles.length
+                ? `${macrocycles.length} temporadas configuradas`
+                : "Configura objetivos anuales con la misma flexibilidad que en el Excel."}
+            </p>
+            <ul className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
+              {macrocycleSummary.length === 0 ? (
+                <li className="rounded-xl border border-dashed border-slate-300 bg-white p-4 text-xs text-slate-500">
+                  Aún no hay macrociclos. Crea el primero para comenzar.
+                </li>
+              ) : (
+                macrocycleSummary.map((macrocycle) => {
+                  const isSelected = macrocycle.id === selectedMacrocycleId;
+                  return (
+                    <li key={macrocycle.id}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleSelectMacrocycle(macrocycle.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            handleSelectMacrocycle(macrocycle.id);
+                          }
+                        }}
+                        className={`flex flex-col gap-2 rounded-xl border bg-white p-4 text-sm shadow-sm transition ${
+                          isSelected
+                            ? "border-brand-primary/60 ring-2 ring-brand-primary/20"
+                            : "border-slate-200 hover:border-brand-primary/40 hover:shadow-md"
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="flex flex-col">
+                            <span className="text-base font-semibold text-slate-900">
+                              {macrocycle.name}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {macrocycle.duration}
+                              {macrocycle.season
+                                ? ` · ${macrocycle.season}`
+                                : ""}
+                            </span>
+                          </div>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                              planningStatusStyle[macrocycle.status]
+                            }`}
+                          >
+                            {planningStatusLabel[macrocycle.status]}
+                          </span>
+                        </div>
+                        {macrocycle.goal ? (
+                          <p className="text-xs text-slate-600">
+                            Meta: {macrocycle.goal}
+                          </p>
+                        ) : null}
+                        {macrocycle.notes ? (
+                          <p className="text-xs text-slate-500 line-clamp-2">
+                            {macrocycle.notes}
+                          </p>
+                        ) : null}
+                        <div className="flex flex-wrap justify-end gap-2 pt-2 text-xs">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openCreateMacrocycle();
+                              setMacroForm({
+                                name: macrocycle.name,
+                                season: macrocycle.season ?? "",
+                                start_date: macrocycle.start_date,
+                                end_date: macrocycle.end_date,
+                                goal: macrocycle.goal ?? "",
+                                notes: macrocycle.notes ?? "",
+                                status: macrocycle.status,
+                              });
+                              setEditingMacroId(macrocycle.id);
+                              setEditor({ type: "macrocycle", mode: "edit" });
+                            }}
+                            className="rounded border border-slate-200 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async (event) => {
+                              event.stopPropagation();
+                              await duplicateMacrocycle(macrocycle);
+                            }}
+                            className="rounded border border-slate-200 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                          >
+                            Duplicar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async (event) => {
+                              event.stopPropagation();
+                              if (
+                                window.confirm(
+                                  "¿Eliminar este macrociclo y todo su contenido?"
+                                )
+                              ) {
+                                try {
+                                  await deleteMacrocycle(macrocycle.id);
+                                  if (selectedMacrocycleId === macrocycle.id) {
+                                    setSelectedMacrocycleId(null);
+                                    setSelectedMesocycleId(null);
+                                    setSelectedMicrocycleId(null);
+                                  }
+                                  await Promise.all([
+                                    refreshMacrocycles(),
+                                    refreshMesocycles(),
+                                    refreshMicrocycles(),
+                                    refreshSessions(),
+                                  ]);
+                                  setFeedback("Macrociclo eliminado.");
+                                } catch (error) {
+                                  console.error(error);
+                                  setFeedback(
+                                    error instanceof Error
+                                      ? error.message
+                                      : "No se pudo eliminar el macrociclo."
+                                  );
+                                }
+                              }
+                            }}
+                            className="rounded border border-rose-200 px-3 py-1 font-medium text-rose-600 transition hover:border-rose-300 hover:text-rose-700"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </section>
+
+          <section className="flex h-full flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm">
+            <header className="flex items-start justify-between gap-2">
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Fases
+                </span>
+                <h3 className="text-base font-semibold text-slate-900">
+                  Mesociclos
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={openCreateMesocycle}
+                disabled={!selectedMacrocycleId}
+                className={`rounded-full border border-dashed px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+                  selectedMacrocycleId
+                    ? "border-brand-primary/60 text-brand-primary hover:bg-brand-primary/10"
+                    : "cursor-not-allowed border-slate-200 text-slate-400"
+                }`}
+              >
+                + Nuevo
+              </button>
+            </header>
+            <p className="text-xs text-slate-500">
+              {selectedMacrocycle
+                ? `Organiza las fases de ${selectedMacrocycle.name}.`
+                : "Selecciona un macrociclo para detallar sus fases intermedias."}
+            </p>
+            <ul className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
+              {!selectedMacrocycleId ? (
+                <li className="rounded-xl border border-dashed border-slate-300 bg-white p-4 text-xs text-slate-500">
+                  Selecciona un macrociclo para ver y crear sus mesociclos.
+                </li>
+              ) : mesocycleSummary.length === 0 ? (
+                <li className="rounded-xl border border-dashed border-slate-300 bg-white p-4 text-xs text-slate-500">
+                  Aún no hay mesociclos. Añade fases para estructurar la
+                  temporada.
+                </li>
+              ) : (
+                mesocycleSummary.map((mesocycle) => {
+                  const isSelected = mesocycle.id === selectedMesocycleId;
+                  return (
+                    <li key={mesocycle.id}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleSelectMesocycle(mesocycle.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            handleSelectMesocycle(mesocycle.id);
+                          }
+                        }}
+                        className={`flex flex-col gap-2 rounded-xl border bg-white p-4 text-sm shadow-sm transition ${
+                          isSelected
+                            ? "border-brand-primary/60 ring-2 ring-brand-primary/20"
+                            : "border-slate-200 hover:border-brand-primary/40 hover:shadow-md"
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="flex flex-col">
+                            <span className="text-base font-semibold text-slate-900">
+                              {mesocycle.name}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {mesocycle.duration}
+                              {typeof mesocycle.order_index === "number"
+                                ? ` · Orden ${mesocycle.order_index}`
+                                : ""}
+                            </span>
+                          </div>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                              planningStatusStyle[mesocycle.status]
+                            }`}
+                          >
+                            {planningStatusLabel[mesocycle.status]}
+                          </span>
+                        </div>
+                        {mesocycle.goal ? (
+                          <p className="text-xs text-slate-600">
+                            Objetivo: {mesocycle.goal}
+                          </p>
+                        ) : null}
+                        {mesocycle.focus ? (
+                          <p className="text-xs text-slate-500">
+                            Enfoque: {mesocycle.focus}
+                          </p>
+                        ) : null}
+                        <div className="flex flex-wrap justify-end gap-2 pt-2 text-xs">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setEditingMesocycleId(mesocycle.id);
+                              if (mesocycle.macrocycle_id) {
+                                setSelectedMacrocycleId(
+                                  mesocycle.macrocycle_id
+                                );
+                              }
+                              setSelectedMesocycleId(mesocycle.id);
+                              setMesoForm({
+                                name: mesocycle.name,
+                                start_date: mesocycle.start_date,
+                                end_date: mesocycle.end_date,
+                                phase: mesocycle.phase ?? "",
+                                focus: mesocycle.focus ?? "",
+                                goal: mesocycle.goal ?? "",
+                                order_index: String(mesocycle.order_index ?? 0),
+                                status: mesocycle.status,
+                              });
+                              setEditor({ type: "mesocycle", mode: "edit" });
+                            }}
+                            className="rounded border border-slate-200 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async (event) => {
+                              event.stopPropagation();
+                              await duplicateMesocycle(mesocycle);
+                            }}
+                            className="rounded border border-slate-200 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                          >
+                            Duplicar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async (event) => {
+                              event.stopPropagation();
+                              if (
+                                window.confirm(
+                                  "¿Eliminar este mesociclo y sus microciclos?"
+                                )
+                              ) {
+                                try {
+                                  await deleteMesocycle(mesocycle.id);
+                                  if (selectedMesocycleId === mesocycle.id) {
+                                    setSelectedMesocycleId(null);
+                                    setSelectedMicrocycleId(null);
+                                  }
+                                  await Promise.all([
+                                    refreshMesocycles(),
+                                    refreshMicrocycles(),
+                                    refreshSessions(),
+                                  ]);
+                                  setFeedback("Mesociclo eliminado.");
+                                } catch (error) {
+                                  console.error(error);
+                                  setFeedback(
+                                    error instanceof Error
+                                      ? error.message
+                                      : "No se pudo eliminar el mesociclo."
+                                  );
+                                }
+                              }
+                            }}
+                            className="rounded border border-rose-200 px-3 py-1 font-medium text-rose-600 transition hover:border-rose-300 hover:text-rose-700"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </section>
+
+          <section className="flex h-full flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm">
+            <header className="flex items-start justify-between gap-2">
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Microciclos
+                </span>
+                <h3 className="text-base font-semibold text-slate-900">
+                  Semanas clave
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={openCreateMicrocycle}
+                disabled={!selectedMesocycleId}
+                className={`rounded-full border border-dashed px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+                  selectedMesocycleId
+                    ? "border-brand-primary/60 text-brand-primary hover:bg-brand-primary/10"
+                    : "cursor-not-allowed border-slate-200 text-slate-400"
+                }`}
+              >
+                + Nuevo
+              </button>
+            </header>
+            <p className="text-xs text-slate-500">
+              {selectedMesocycle
+                ? `Detalla la planificación semanal dentro de ${selectedMesocycle.name}.`
+                : "Selecciona un mesociclo para gestionar sus microciclos."}
+            </p>
+            <ul className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
+              {!selectedMesocycleId ? (
+                <li className="rounded-xl border border-dashed border-slate-300 bg-white p-4 text-xs text-slate-500">
+                  Selecciona un mesociclo para ver sus microciclos.
+                </li>
+              ) : microcycles.length === 0 ? (
+                <li className="rounded-xl border border-dashed border-slate-300 bg-white p-4 text-xs text-slate-500">
+                  Añade microciclos semanales para reflejar el Excel.
+                </li>
+              ) : (
+                microcycles.map((microcycle) => {
+                  const isSelected = microcycle.id === selectedMicrocycleId;
+                  return (
+                    <li key={microcycle.id}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleSelectMicrocycle(microcycle.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            handleSelectMicrocycle(microcycle.id);
+                          }
+                        }}
+                        className={`flex flex-col gap-2 rounded-xl border bg-white p-4 text-sm shadow-sm transition ${
+                          isSelected
+                            ? "border-brand-primary/60 ring-2 ring-brand-primary/20"
+                            : "border-slate-200 hover:border-brand-primary/40 hover:shadow-md"
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="flex flex-col">
+                            <span className="text-base font-semibold text-slate-900">
+                              {microcycle.name}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              Semana {microcycle.week_number}
+                            </span>
+                          </div>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                              planningStatusStyle[microcycle.status]
+                            }`}
+                          >
+                            {planningStatusLabel[microcycle.status]}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                          {microcycle.focus ? (
+                            <span>· {microcycle.focus}</span>
+                          ) : null}
+                          {microcycle.load ? (
+                            <span>· Carga {microcycle.load}</span>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-wrap justify-end gap-2 pt-2 text-xs">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              startMicrocycleEdit(microcycle);
+                            }}
+                            className="rounded border border-slate-200 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async (event) => {
+                              event.stopPropagation();
+                              await duplicateMicrocycle(microcycle);
+                            }}
+                            className="rounded border border-slate-200 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                          >
+                            Duplicar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async (event) => {
+                              event.stopPropagation();
+                              if (
+                                window.confirm(
+                                  "¿Eliminar este microciclo y las sesiones asociadas?"
+                                )
+                              ) {
+                                try {
+                                  await deleteMicrocycle(microcycle.id);
+                                  if (selectedMicrocycleId === microcycle.id) {
+                                    setSelectedMicrocycleId(null);
+                                  }
+                                  await Promise.all([
+                                    refreshMicrocycles(),
+                                    refreshSessions(),
+                                  ]);
+                                  setFeedback("Microciclo eliminado.");
+                                } catch (error) {
+                                  console.error(error);
+                                  setFeedback(
+                                    error instanceof Error
+                                      ? error.message
+                                      : "No se pudo eliminar el microciclo."
+                                  );
+                                }
+                              }
+                            }}
+                            className="rounded border border-rose-200 px-3 py-1 font-medium text-rose-600 transition hover:border-rose-300 hover:text-rose-700"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </section>
+
+          <section className="flex h-full flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm">
+            <header className="flex items-start justify-between gap-2">
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  {sessionScopeLabel}
+                </span>
+                <h3 className="text-base font-semibold text-slate-900">
+                  Sesiones
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={openCreateSession}
+                disabled={!selectedMacrocycleId}
+                className={`rounded-full border border-dashed px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+                  selectedMacrocycleId
+                    ? "border-brand-primary/60 text-brand-primary hover:bg-brand-primary/10"
+                    : "cursor-not-allowed border-slate-200 text-slate-400"
+                }`}
+              >
+                + Nueva
+              </button>
+            </header>
+            <p className="text-xs text-slate-500">
+              {selectedMacrocycle
+                ? "Programa entrenamientos específicos y alínea al staff incluso offline."
+                : "Selecciona al menos un macrociclo para planificar sesiones."}
+            </p>
+            <ul className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
+              {!selectedMacrocycleId ? (
+                <li className="rounded-xl border border-dashed border-slate-300 bg-white p-4 text-xs text-slate-500">
+                  Selecciona un macrociclo o microciclo para ver las sesiones
+                  asociadas.
+                </li>
+              ) : sessions.length === 0 ? (
+                <li className="rounded-xl border border-dashed border-slate-300 bg-white p-4 text-xs text-slate-500">
+                  No hay sesiones registradas para esta selección.
+                </li>
+              ) : (
+                sessions.map((session) => (
+                  <li key={session.id}>
+                    <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm transition hover:border-brand-primary/40 hover:shadow-md">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="flex flex-col">
+                          <span className="text-base font-semibold text-slate-900">
+                            {session.name || session.session_type}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {formatWeekdayDate(session.date)}
+                          </span>
+                        </div>
                         <span
                           className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                            planningStatusStyle[microcycle.status]
+                            sessionStatusStyle[session.status]
                           }`}
                         >
-                          {planningStatusLabel[microcycle.status]}
+                          {sessionStatusLabel[session.status]}
                         </span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                        <span>Semana {microcycle.week_number}</span>
-                        {microcycle.focus ? (
-                          <span>· {microcycle.focus}</span>
-                        ) : null}
-                        {microcycle.load ? (
-                          <span>· Carga {microcycle.load}</span>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-end gap-2 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => startMicrocycleEdit(microcycle)}
-                        className="rounded border border-slate-200 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (
-                            window.confirm(
-                              "¿Eliminar este microciclo y las sesiones asociadas?"
-                            )
-                          ) {
-                            try {
-                              await deleteMicrocycle(microcycle.id);
-                              if (selectedMicrocycleId === microcycle.id) {
-                                setSelectedMicrocycleId(null);
-                              }
-                              await Promise.all([
-                                refreshMicrocycles(),
-                                refreshSessions(),
-                              ]);
-                              setFeedback("Microciclo eliminado.");
-                            } catch (error) {
-                              console.error(error);
-                              setFeedback(
-                                error instanceof Error
-                                  ? error.message
-                                  : "No se pudo eliminar el microciclo."
+                        {session.microcycle_id
+                          ? "Microciclo asignado"
+                          : session.mesocycle_id
+                          ? "Mesociclo general"
+                          : "Macrociclo general"}
+                        {session.trainer_id
+                          ? (() => {
+                              const trainer = trainers.find(
+                                (item) => item.id === session.trainer_id
                               );
+                              return trainer
+                                ? `· Coach: ${trainer.name}`
+                                : null;
+                            })()
+                          : null}
+                        <span>· Plan: {session.session_type}</span>
+                      </div>
+                      {session.notes ? (
+                        <p className="text-xs text-slate-600">
+                          {session.notes}
+                        </p>
+                      ) : null}
+                      <div className="flex flex-wrap justify-end gap-2 pt-2 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => startSessionEdit(session)}
+                          className="rounded border border-slate-200 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await duplicateSession(session);
+                          }}
+                          className="rounded border border-slate-200 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                        >
+                          Duplicar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (
+                              window.confirm(
+                                "¿Eliminar esta sesión programada?"
+                              )
+                            ) {
+                              try {
+                                await deleteSessionPlan(session.id);
+                                if (editingSessionId === session.id) {
+                                  resetSessionForm();
+                                }
+                                await refreshSessions();
+                                setFeedback("Sesión eliminada.");
+                              } catch (error) {
+                                console.error(error);
+                                setFeedback(
+                                  error instanceof Error
+                                    ? error.message
+                                    : "No se pudo eliminar la sesión."
+                                );
+                              }
                             }
-                          }
-                        }}
-                        className="rounded border border-rose-200 px-3 py-1 font-medium text-rose-600 transition hover:border-rose-300 hover:text-rose-700"
-                      >
-                        Eliminar
-                      </button>
+                          }}
+                          className="rounded border border-rose-200 px-3 py-1 font-medium text-rose-600 transition hover:border-rose-300 hover:text-rose-700"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
                     </div>
                   </li>
-                );
-              })
-            )}
-          </ul>
-        </article>
-      ) : null}
+                ))
+              )}
+            </ul>
+          </section>
+        </div>
+      </section>
 
-      {selectedMacrocycleId ? (
-        <article className="flex flex-col gap-4 rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-          <header className="flex items-center justify-between gap-4">
-            <div className="flex flex-col">
-              <h3 className="text-lg font-semibold text-slate-900">Sesiones</h3>
-              <p className="text-xs text-slate-500">
-                Programa entrenamientos específicos y enlázalos con el plan
-                semanal.
-              </p>
-            </div>
-          </header>
-
-          <form
-            onSubmit={handleSessionSubmit}
-            className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm shadow-sm md:grid-cols-2"
-          >
-            <label className="flex flex-col gap-1">
-              <span>Título (opcional)</span>
-              <input
-                value={sessionForm.name}
-                onChange={(event) =>
-                  setSessionForm((prev) => ({
-                    ...prev,
-                    name: event.target.value,
-                  }))
-                }
-                className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-                placeholder="Sesión de fuerza A"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Fecha</span>
-              <input
-                type="date"
-                required
-                value={sessionForm.date}
-                onChange={(event) =>
-                  setSessionForm((prev) => ({
-                    ...prev,
-                    date: event.target.value,
-                  }))
-                }
-                className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Entrenamiento asignado</span>
-              <select
-                required
-                value={sessionForm.session_type}
-                onChange={(event) =>
-                  setSessionForm((prev) => ({
-                    ...prev,
-                    session_type: event.target.value,
-                  }))
-                }
-                className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-              >
-                <option value="">Selecciona un entrenamiento</option>
-                {trainingSheets.map((sheet) => (
-                  <option key={sheet} value={sheet}>
-                    {sheet}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Responsable</span>
-              <select
-                value={sessionForm.trainer_id}
-                onChange={(event) =>
-                  setSessionForm((prev) => ({
-                    ...prev,
-                    trainer_id: event.target.value,
-                  }))
-                }
-                className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-              >
-                <option value="">Sin asignar</option>
-                {trainers.map((trainer) => (
-                  <option key={trainer.id} value={trainer.id}>
-                    {trainer.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Orden</span>
-              <input
-                type="number"
-                min={0}
-                value={sessionForm.order_index}
-                onChange={(event) =>
-                  setSessionForm((prev) => ({
-                    ...prev,
-                    order_index: event.target.value,
-                  }))
-                }
-                className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span>Estado</span>
-              <select
-                value={sessionForm.status}
-                onChange={(event) =>
-                  setSessionForm((prev) => ({
-                    ...prev,
-                    status: event.target.value as SessionStatus,
-                  }))
-                }
-                className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-              >
-                {Object.entries(sessionStatusLabel).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 md:col-span-2">
-              <span>Notas</span>
-              <textarea
-                value={sessionForm.notes}
-                onChange={(event) =>
-                  setSessionForm((prev) => ({
-                    ...prev,
-                    notes: event.target.value,
-                  }))
-                }
-                className="min-h-[72px] rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
-                placeholder="Indicaciones para atletas, recordatorios logísticos o métricas a controlar."
-              />
-            </label>
-            <div className="flex items-center justify-end gap-2 md:col-span-2">
-              {editingSessionId ? (
-                <button
-                  type="button"
-                  onClick={resetSessionForm}
-                  className="rounded border border-slate-300 px-4 py-2 font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
-                >
-                  Cancelar
-                </button>
-              ) : null}
-              <button
-                type="submit"
-                className="rounded bg-brand-primary px-4 py-2 font-semibold text-white transition hover:bg-brand-accent"
-              >
-                {editingSessionId ? "Actualizar sesión" : "Programar sesión"}
-              </button>
-            </div>
-          </form>
-
-          <ul className="flex flex-col gap-3">
-            {sessions.length === 0 ? (
-              <li className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
-                No hay sesiones programadas para esta selección. Crea la
-                primera.
-              </li>
-            ) : (
-              sessions.map((session) => (
-                <li
-                  key={session.id}
-                  className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm shadow-sm transition hover:border-brand-primary/40 hover:shadow-md"
-                >
-                  <div className="flex flex-col gap-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-col">
-                        <span className="text-base font-semibold text-slate-900">
-                          {session.name || session.session_type}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          {formatWeekdayDate(session.date)}
-                        </span>
-                      </div>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                          sessionStatusStyle[session.status]
-                        }`}
-                      >
-                        {sessionStatusLabel[session.status]}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                      {session.microcycle_id
-                        ? "Microciclo asignado"
-                        : session.mesocycle_id
-                        ? "Mesociclo general"
-                        : "Macrociclo general"}
-                      {session.trainer_id
-                        ? (() => {
-                            const trainer = trainers.find(
-                              (item) => item.id === session.trainer_id
-                            );
-                            return trainer ? `· Coach: ${trainer.name}` : null;
-                          })()
-                        : null}
-                      <span>· Plan: {session.session_type}</span>
-                    </div>
-                    {session.notes ? (
-                      <p className="text-xs text-slate-600">{session.notes}</p>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center justify-end gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => startSessionEdit(session)}
-                      className="rounded border border-slate-200 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (
-                          window.confirm("¿Eliminar esta sesión programada?")
-                        ) {
-                          try {
-                            await deleteSessionPlan(session.id);
-                            if (editingSessionId === session.id) {
-                              resetSessionForm();
-                            }
-                            await refreshSessions();
-                            setFeedback("Sesión eliminada.");
-                          } catch (error) {
-                            console.error(error);
-                            setFeedback(
-                              error instanceof Error
-                                ? error.message
-                                : "No se pudo eliminar la sesión."
-                            );
-                          }
-                        }
-                      }}
-                      className="rounded border border-rose-200 px-3 py-1 font-medium text-rose-600 transition hover:border-rose-300 hover:text-rose-700"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </li>
-              ))
-            )}
-          </ul>
-        </article>
-      ) : null}
-    </section>
+      {renderEditorForm()}
+    </>
   );
 }
