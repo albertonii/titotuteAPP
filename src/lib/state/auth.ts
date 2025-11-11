@@ -60,16 +60,35 @@ export const useAuthStore = create<AuthState>()(
             throw new Error("No se pudo iniciar sesión.");
           }
 
-          await db.users.put({
-            id: user.id,
-            name: user.user_metadata?.full_name ?? user.email ?? "Usuario",
-            role: (user.app_metadata?.role as any) ?? "athlete",
-            email: user.email?.toLowerCase() ?? email.toLowerCase(),
-            updated_at: new Date().toISOString(),
-          });
+          let storedUser = await db.users.get(user.id);
+          if (supabase) {
+            try {
+              const { data: remoteProfile } = await supabase
+                .from<User>("users")
+                .select("*")
+                .eq("id", user.id)
+                .maybeSingle();
+              if (remoteProfile) {
+                await db.users.put(remoteProfile);
+                storedUser = remoteProfile;
+              }
+            } catch (remoteError) {
+              console.error("[auth] failed to fetch remote profile", remoteError);
+            }
+          }
 
-          const storedUser = await db.users.get(user.id);
-          set({ user: storedUser ?? null, status: "authenticated" });
+          if (!storedUser) {
+            storedUser = {
+              id: user.id,
+              name: user.user_metadata?.full_name ?? user.email ?? "Usuario",
+              role: ((user.app_metadata?.role as unknown) as User["role"]) ?? "athlete",
+              email: user.email?.toLowerCase() ?? email.toLowerCase(),
+              updated_at: new Date().toISOString(),
+            };
+            await db.users.put(storedUser);
+          }
+
+          set({ user: storedUser, status: "authenticated" });
           console.log("[auth] signIn success", storedUser);
         } catch (error) {
           const message =
