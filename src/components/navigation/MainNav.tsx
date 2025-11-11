@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSyncStore } from "@/lib/state/sync";
 import { UserBadge } from "./UserBadge";
+import logoHorizontal from "../../../public/brand/logo_horizontal.png";
 
 const links = [
   { href: "/", label: "Inicio" },
@@ -49,9 +51,14 @@ export function MainNav() {
   return (
     <nav className="flex w-full flex-col gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center justify-between gap-3">
-        <span className="font-semibold text-brand-primary">
-          Tito &amp; Tute
-        </span>
+        <div className="flex items-center gap-3">
+          <Image
+            src={logoHorizontal}
+            alt="Tito & Tute Training"
+            priority
+            className="h-8 w-auto"
+          />
+        </div>
         <span className={`text-xs ${statusStyle}`}>{statusLabel}</span>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
