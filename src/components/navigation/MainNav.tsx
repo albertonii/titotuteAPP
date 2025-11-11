@@ -8,14 +8,6 @@ import { UserBadge } from "./UserBadge";
 import logoHorizontal from "../../../public/brand/logo_horizontal.png";
 import { useAuthStore } from "@/lib/state/auth";
 
-const baseLinks = [
-  { href: "/", label: "Inicio" },
-  { href: "/training", label: "Plan" },
-  { href: "/coach", label: "Coach" },
-  { href: "/athlete", label: "Atleta" },
-  { href: "/sync", label: "Sync" },
-];
-
 export function MainNav() {
   const pathname = usePathname();
   const { status, queueCount } = useSyncStore((state) => ({
@@ -50,6 +42,30 @@ export function MainNav() {
     }
   })();
 
+  const navigationLinks = () => {
+    const links = [
+      { href: "/", label: "Inicio" },
+      { href: "/sync", label: "Sync" },
+    ];
+
+    if (user?.role === "athlete") {
+      links.push({ href: "/training", label: "Plan" });
+      links.push({ href: "/athlete", label: "Atleta" });
+    }
+
+    if (user?.role === "trainer") {
+      links.push({ href: "/coach", label: "Coach" });
+    }
+
+    if (user?.role === "admin") {
+      links.push({ href: "/admin", label: "Gestión" });
+    }
+
+    return links;
+  };
+
+  const links = navigationLinks();
+
   return (
     <nav className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center justify-between gap-3">
@@ -79,10 +95,7 @@ export function MainNav() {
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
         <ul className="flex items-center gap-3 overflow-x-auto">
-          {(user?.role === "admin"
-            ? [{ href: "/admin", label: "Gestión" }, ...baseLinks]
-            : baseLinks
-          ).map((link) => {
+          {links.map((link) => {
             const isActive = pathname === link.href;
             return (
               <li key={link.href}>
