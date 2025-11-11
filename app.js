@@ -8,7 +8,9 @@ class PerformanceTracker {
     }
 
     init() {
-        this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+        if (this.form) {
+            this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+        }
         this.renderPerformances();
         this.updateStats();
     }
@@ -48,6 +50,8 @@ class PerformanceTracker {
     }
 
     renderPerformances() {
+        if (!this.performanceList) return;
+        
         if (this.performances.length === 0) {
             this.performanceList.innerHTML = '<p class="empty-message">No hay registros aún. ¡Comienza registrando tu primera sesión!</p>';
             return;
@@ -85,9 +89,13 @@ class PerformanceTracker {
             ? (this.performances.reduce((sum, p) => sum + p.score, 0) / totalSessions).toFixed(1)
             : '0.0';
 
-        document.getElementById('total-sessions').textContent = totalSessions;
-        document.getElementById('total-time').textContent = totalTime;
-        document.getElementById('average-score').textContent = averageScore;
+        const totalSessionsEl = document.getElementById('total-sessions');
+        const totalTimeEl = document.getElementById('total-time');
+        const averageScoreEl = document.getElementById('average-score');
+        
+        if (totalSessionsEl) totalSessionsEl.textContent = totalSessions;
+        if (totalTimeEl) totalTimeEl.textContent = totalTime;
+        if (averageScoreEl) averageScoreEl.textContent = averageScore;
     }
 
     formatDate(dateString) {
@@ -109,11 +117,13 @@ class PerformanceTracker {
     }
 
     showSuccessMessage() {
+        const registroSection = document.querySelector('.registro-section');
+        if (!registroSection || !this.form) return;
+        
         const message = document.createElement('div');
         message.className = 'success-message';
         message.textContent = '✓ Rendimiento registrado exitosamente';
         
-        const registroSection = document.querySelector('.registro-section');
         registroSection.insertBefore(message, this.form);
         
         setTimeout(() => message.remove(), 3000);
