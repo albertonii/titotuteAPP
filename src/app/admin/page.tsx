@@ -99,7 +99,8 @@ export default function AdminPage() {
           });
           if (!response.ok) {
             throw new Error(
-              (await response.json()).message ?? "No se pudo invitar al usuario."
+              (await response.json()).message ??
+                "No se pudo invitar al usuario."
             );
           }
           setStatus(
