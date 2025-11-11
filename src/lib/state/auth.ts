@@ -38,11 +38,6 @@ export const useAuthStore = create<AuthState>()(
       async signIn(email: string, password: string) {
         set({ status: "loading", error: undefined });
         const supabase = getSupabaseClient();
-        console.log("[auth] signIn attempt", {
-          online: navigator.onLine,
-          hasClient: Boolean(supabase),
-          email,
-        });
         try {
           if (!navigator.onLine || !supabase) {
             await get().hydrateUserFromLocal(email);
@@ -64,16 +59,20 @@ export const useAuthStore = create<AuthState>()(
           if (supabase) {
             try {
               const { data: remoteProfile } = await supabase
-                .from<User>("users")
+                .from("users")
                 .select("*")
                 .eq("id", user.id)
                 .maybeSingle();
               if (remoteProfile) {
-                await db.users.put(remoteProfile);
-                storedUser = remoteProfile;
+                const profile = remoteProfile as User;
+                await db.users.put(profile);
+                storedUser = profile;
               }
             } catch (remoteError) {
-              console.error("[auth] failed to fetch remote profile", remoteError);
+              console.error(
+                "[auth] failed to fetch remote profile",
+                remoteError
+              );
             }
           }
 
@@ -81,7 +80,9 @@ export const useAuthStore = create<AuthState>()(
             storedUser = {
               id: user.id,
               name: user.user_metadata?.full_name ?? user.email ?? "Usuario",
-              role: ((user.app_metadata?.role as unknown) as User["role"]) ?? "athlete",
+              role:
+                (user.app_metadata?.role as unknown as User["role"]) ??
+                "athlete",
               email: user.email?.toLowerCase() ?? email.toLowerCase(),
               updated_at: new Date().toISOString(),
             };
@@ -89,12 +90,10 @@ export const useAuthStore = create<AuthState>()(
           }
 
           set({ user: storedUser, status: "authenticated" });
-          console.log("[auth] signIn success", storedUser);
         } catch (error) {
           const message =
             error instanceof Error ? error.message : "Error inesperado";
           set({ status: "error", error: message });
-          console.error("[auth] signIn error", error);
         }
       },
       async signOut() {

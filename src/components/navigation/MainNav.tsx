@@ -10,6 +10,7 @@ import { useAuthStore } from "@/lib/state/auth";
 
 const baseLinks = [
   { href: "/", label: "Inicio" },
+  { href: "/training", label: "Plan" },
   { href: "/coach", label: "Coach" },
   { href: "/athlete", label: "Atleta" },
   { href: "/sync", label: "Sync" },

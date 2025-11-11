@@ -89,6 +89,20 @@ export interface PendingCredential {
   last_error?: string;
 }
 
+export interface ExerciseLog {
+  id: string;
+  user_id: string;
+  training_sheet: string;
+  exercise_name: string;
+  microcycle?: string;
+  load?: string;
+  reps?: string;
+  rir?: string;
+  notes?: string;
+  performed_at: string;
+  updated_at: string;
+}
+
 class LocalDatabase extends Dexie {
   users!: Table<User>;
   mesocycles!: Table<Mesocycle>;
@@ -99,6 +113,7 @@ class LocalDatabase extends Dexie {
   attendance!: Table<Attendance>;
   outbox!: Table<OutboxAction>;
   pending_credentials!: Table<PendingCredential>;
+  exercise_logs!: Table<ExerciseLog>;
 
   constructor() {
     super("tito_tute_local");
@@ -116,6 +131,11 @@ class LocalDatabase extends Dexie {
 
     this.version(2).stores({
       pending_credentials: "id, email, role, user_id",
+    });
+
+    this.version(3).stores({
+      exercise_logs:
+        "id, user_id, training_sheet, exercise_name, microcycle, performed_at, updated_at",
     });
   }
 }

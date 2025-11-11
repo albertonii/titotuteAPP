@@ -67,6 +67,7 @@ export const syncPull = async (): Promise<number> => {
     "groups",
     "group_members",
     "attendance",
+    "exercise_logs",
   ] as const;
 
   for (const table of tables) {
