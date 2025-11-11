@@ -6,8 +6,9 @@ import { usePathname } from "next/navigation";
 import { useSyncStore } from "@/lib/state/sync";
 import { UserBadge } from "./UserBadge";
 import logoHorizontal from "../../../public/brand/logo_horizontal.png";
+import { useAuthStore } from "@/lib/state/auth";
 
-const links = [
+const baseLinks = [
   { href: "/", label: "Inicio" },
   { href: "/coach", label: "Coach" },
   { href: "/athlete", label: "Atleta" },
@@ -21,6 +22,7 @@ export function MainNav() {
     status: state.status,
     queueCount: state.queueCount,
   }));
+  const user = useAuthStore((state) => state.user);
 
   const statusLabel = (() => {
     switch (status) {
@@ -77,7 +79,13 @@ export function MainNav() {
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
         <ul className="flex items-center gap-3 overflow-x-auto">
-          {links.map((link) => {
+          {(user?.role === "admin"
+            ? [
+                { href: "/admin", label: "Gestión" },
+                ...baseLinks.filter((link) => link.href !== "/login"),
+              ]
+            : baseLinks
+          ).map((link) => {
             const isActive = pathname === link.href;
             return (
               <li key={link.href}>
