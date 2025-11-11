@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient, type SupabaseClient } from "@supabase/ssr";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -15,13 +15,7 @@ const ensureClient = () => {
     return null;
   }
   if (!client) {
-    client = createBrowserClient(supabaseUrl, supabaseAnonKey, {
-      cookies: {
-        getAll() {
-          return [];
-        },
-      },
-    });
+    client = createClient(supabaseUrl, supabaseAnonKey);
   }
   return client;
 };
@@ -33,15 +27,18 @@ export const signInWithEmail = async (email: string, password: string) => {
   if (!supabase) {
     throw new Error("Supabase no está configurado en este entorno.");
   }
+  console.log("[supabase] signInWithPassword request", { email });
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) {
+    console.error("[supabase] signInWithPassword error", error);
     throw error;
   }
 
+  console.log("[supabase] signInWithPassword success", data.user?.id);
   return data;
 };
 

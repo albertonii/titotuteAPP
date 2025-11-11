@@ -38,6 +38,11 @@ export const useAuthStore = create<AuthState>()(
       async signIn(email: string, password: string) {
         set({ status: "loading", error: undefined });
         const supabase = getSupabaseClient();
+        console.log("[auth] signIn attempt", {
+          online: navigator.onLine,
+          hasClient: Boolean(supabase),
+          email,
+        });
         try {
           if (!navigator.onLine || !supabase) {
             await get().hydrateUserFromLocal(email);
@@ -65,10 +70,12 @@ export const useAuthStore = create<AuthState>()(
 
           const storedUser = await db.users.get(user.id);
           set({ user: storedUser ?? null, status: "authenticated" });
+          console.log("[auth] signIn success", storedUser);
         } catch (error) {
           const message =
             error instanceof Error ? error.message : "Error inesperado";
           set({ status: "error", error: message });
+          console.error("[auth] signIn error", error);
         }
       },
       async signOut() {
