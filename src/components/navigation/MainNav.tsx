@@ -55,9 +55,12 @@ export function MainNav() {
 
     if (user?.role === "trainer") {
       links.push({ href: "/coach", label: "Coach" });
+      links.push({ href: "/admin", label: "Gestión" });
     }
 
     if (user?.role === "admin") {
+      links.push({ href: "/coach", label: "Coach" });
+      links.push({ href: "/training", label: "Plan" });
       links.push({ href: "/admin", label: "Gestión" });
     }
 

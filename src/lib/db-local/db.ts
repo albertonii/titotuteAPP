@@ -1,6 +1,14 @@
 import Dexie, { type Table } from "dexie";
 
+if (typeof (globalThis as { self?: unknown }).self === "undefined") {
+  (globalThis as { self: typeof globalThis }).self = globalThis;
+}
+
+import "dexie-observable";
+
 export type UserRole = "trainer" | "athlete" | "nutritionist" | "admin";
+export type PlanningStatus = "draft" | "published" | "archived";
+export type SessionStatus = "draft" | "scheduled" | "completed" | "cancelled";
 
 export interface User {
   id: string;
@@ -13,23 +21,58 @@ export interface User {
   updated_at: string;
 }
 
+export interface Macrocycle {
+  id: string;
+  name: string;
+  season?: string | null;
+  start_date: string;
+  end_date: string;
+  goal?: string | null;
+  notes?: string | null;
+  status: PlanningStatus;
+  created_by?: string | null;
+  updated_at: string;
+}
+
 export interface Mesocycle {
   id: string;
+  macrocycle_id?: string | null;
   name: string;
   start_date: string;
   end_date: string;
-  phase: string;
+  phase?: string | null;
+  focus?: string | null;
+  goal?: string | null;
+  order_index?: number;
+  status: PlanningStatus;
+  updated_at: string;
+}
+
+export interface Microcycle {
+  id: string;
+  mesocycle_id: string;
+  name: string;
+  week_number: number;
+  start_date?: string | null;
+  end_date?: string | null;
+  focus?: string | null;
+  load?: string | null;
+  status: PlanningStatus;
   updated_at: string;
 }
 
 export interface Session {
   id: string;
-  mesocycle_id: string;
-  trainer_id: string;
+  macrocycle_id?: string | null;
+  mesocycle_id?: string | null;
+  microcycle_id?: string | null;
+  trainer_id?: string | null;
+  name?: string | null;
   date: string;
   session_type: string;
-  microcycle?: string;
-  notes?: string;
+  order_index?: number;
+  status: SessionStatus;
+  notes?: string | null;
   updated_at: string;
 }
 
@@ -105,7 +148,9 @@ export interface ExerciseLog {
 
 class LocalDatabase extends Dexie {
   users!: Table<User>;
+  macrocycles!: Table<Macrocycle>;
   mesocycles!: Table<Mesocycle>;
+  microcycles!: Table<Microcycle>;
   sessions!: Table<Session>;
   athlete_progress!: Table<AthleteProgress>;
   groups!: Table<Group>;
@@ -137,6 +182,34 @@ class LocalDatabase extends Dexie {
       exercise_logs:
         "id, user_id, training_sheet, exercise_name, microcycle, performed_at, updated_at",
     });
+
+    this.version(4)
+      .stores({
+        macrocycles:
+          "id, season, start_date, end_date, status, updated_at, created_by",
+        mesocycles:
+          "id, macrocycle_id, start_date, end_date, status, order_index, updated_at",
+        microcycles:
+          "id, mesocycle_id, week_number, start_date, end_date, status, updated_at",
+        sessions:
+          "id, macrocycle_id, mesocycle_id, microcycle_id, date, status, updated_at",
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table("mesocycles")
+          .toCollection()
+          .modify((item: any) => {
+            item.status = item.status ?? "draft";
+            item.order_index = item.order_index ?? 0;
+          });
+        await tx
+          .table("sessions")
+          .toCollection()
+          .modify((item: any) => {
+            item.status = item.status ?? "scheduled";
+            item.order_index = item.order_index ?? 0;
+          });
+      });
   }
 }
 

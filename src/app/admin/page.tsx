@@ -13,8 +13,22 @@ import {
   getPendingCredentialMap,
   queueCredentialInvite,
 } from "@/lib/sync/credentials";
+import { AdminPlanningManager } from "@/components/admin/planning/AdminPlanningManager";
+import { useAuthStore } from "@/lib/state/auth";
 
 const roles: UserRole[] = ["trainer", "athlete", "nutritionist", "admin"];
+
+const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat("es-AR", {
+  dateStyle: "short",
+  timeStyle: "short",
+  timeZone: "UTC",
+});
+
+const formatTimestamp = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "";
+  return TIMESTAMP_FORMATTER.format(date);
+};
 
 interface FormState {
   name: string;
@@ -36,6 +50,9 @@ const DEFAULT_FORM: FormState = {
 
 export default function AdminPage() {
   useAuthGuard({ allowedRoles: ["admin", "trainer"] });
+  const authUser = useAuthStore((state) => state.user);
+  const isAdmin = authUser?.role === "admin";
+  const [activeTab, setActiveTab] = useState<"planning" | "users">("planning");
   const [users, setUsers] = useState<User[]>([]);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [pendingCredentials, setPendingCredentials] = useState<
@@ -150,12 +167,18 @@ export default function AdminPage() {
     }));
   }, [users]);
 
-  return (
-    <section className="flex flex-col gap-6 py-8">
+  useEffect(() => {
+    if (!isAdmin && activeTab === "users") {
+      setActiveTab("planning");
+    }
+  }, [activeTab, isAdmin]);
+
+  const userManagementSection = (
+    <section className="flex flex-col gap-6">
       <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-brand-primary">
+        <h2 className="text-xl font-semibold text-slate-900">
           Gestión de usuarios
-        </h1>
+        </h2>
         <p className="text-sm text-slate-600">
           Crea y sincroniza usuarios de manera local-first. Al volver la
           conexión, los registros se enviarán a Supabase.
@@ -289,7 +312,7 @@ export default function AdminPage() {
                         <span className="text-slate-500">{user.email}</span>
                         <span className="text-slate-500">
                           Última actualización:{" "}
-                          {new Date(user.updated_at).toLocaleString("es-AR")}
+                          {formatTimestamp(user.updated_at)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -326,6 +349,50 @@ export default function AdminPage() {
           </div>
         ))}
       </section>
+    </section>
+  );
+
+  return (
+    <section className="flex flex-col gap-6 py-8">
+      <header className="flex flex-col gap-2">
+        <h1 className="text-2xl font-semibold text-brand-primary">
+          Panel de gestión
+        </h1>
+        <p className="text-sm text-slate-600">
+          Administra el plan deportivo y los perfiles del staff con un enfoque
+          offline-first.
+        </p>
+      </header>
+
+      {isAdmin ? (
+        <div className="flex items-center gap-2 rounded-full bg-slate-100 p-1 text-xs font-medium text-slate-600">
+          <button
+            type="button"
+            onClick={() => setActiveTab("planning")}
+            className={`rounded-full px-3 py-1 transition ${
+              activeTab === "planning"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "hover:text-slate-900"
+            }`}
+          >
+            Planificación
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("users")}
+            className={`rounded-full px-3 py-1 transition ${
+              activeTab === "users"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "hover:text-slate-900"
+            }`}
+          >
+            Usuarios
+          </button>
+        </div>
+      ) : null}
+
+      {activeTab === "planning" ? <AdminPlanningManager /> : null}
+      {isAdmin && activeTab === "users" ? userManagementSection : null}
     </section>
   );
 }

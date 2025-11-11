@@ -35,9 +35,25 @@ export const syncPush = async (): Promise<number> => {
 
   for (const entry of outboxEntries) {
     try {
-      const { error } = await supabase.from(entry.table).upsert(entry.payload);
-      if (error) {
-        throw error;
+      if (entry.operation === "delete") {
+        const payload = entry.payload as { id?: string };
+        if (!payload?.id) {
+          throw new Error(`Delete action for ${entry.table} sin identificador`);
+        }
+        const { error } = await supabase
+          .from(entry.table)
+          .delete()
+          .eq("id", payload.id);
+        if (error) {
+          throw error;
+        }
+      } else {
+        const { error } = await supabase
+          .from(entry.table)
+          .upsert(entry.payload);
+        if (error) {
+          throw error;
+        }
       }
       await db.outbox.delete(entry.id);
       pushed += 1;
@@ -61,7 +77,9 @@ export const syncPull = async (): Promise<number> => {
 
   const tables = [
     "users",
+    "macrocycles",
     "mesocycles",
+    "microcycles",
     "sessions",
     "athlete_progress",
     "groups",
