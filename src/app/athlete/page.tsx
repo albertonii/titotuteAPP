@@ -114,20 +114,20 @@ export default function AthletePage() {
     <section className="flex flex-col gap-6 py-8">
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-brand-primary">Mi sesión</h1>
-        <p className="text-sm text-white/70">
+        <p className="text-sm text-slate-600">
           Registra tus métricas aunque no tengas conexión. Se sincronizarán
           automáticamente.
         </p>
-        <span className="text-xs text-brand-accent">
+        <span className="text-xs text-brand-primary">
           {isOnline ? "Online" : "Offline"} · {entries.length} sesiones
           guardadas
         </span>
-        <span className="text-xs text-white/60">{status}</span>
+        <span className="text-xs text-slate-500">{status}</span>
       </header>
 
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-3 rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur"
+        className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
       >
         <div className="grid grid-cols-2 gap-3 text-sm">
           <label className="flex flex-col gap-1">
@@ -135,7 +135,7 @@ export default function AthletePage() {
             <input
               type="number"
               inputMode="decimal"
-              className="rounded bg-white/10 p-2 text-white"
+              className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
               value={formState.weight}
               onChange={(event) =>
                 setFormState((prev) => ({
@@ -151,7 +151,7 @@ export default function AthletePage() {
               type="number"
               min={1}
               max={10}
-              className="rounded bg-white/10 p-2 text-white"
+              className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
               value={formState.quality}
               onChange={(event) =>
                 setFormState((prev) => ({
@@ -167,7 +167,7 @@ export default function AthletePage() {
               type="number"
               min={1}
               max={10}
-              className="rounded bg-white/10 p-2 text-white"
+              className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
               value={formState.rpe}
               onChange={(event) =>
                 setFormState((prev) => ({ ...prev, rpe: event.target.value }))
@@ -179,7 +179,7 @@ export default function AthletePage() {
             <input
               type="number"
               min={0}
-              className="rounded bg-white/10 p-2 text-white"
+              className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
               value={formState.duration}
               onChange={(event) =>
                 setFormState((prev) => ({
@@ -194,7 +194,7 @@ export default function AthletePage() {
         <label className="flex flex-col gap-1 text-sm">
           <span>Notas</span>
           <textarea
-            className="rounded bg-white/10 p-2 text-white"
+            className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
             rows={3}
             value={formState.notes}
             onChange={(event) =>
@@ -205,7 +205,7 @@ export default function AthletePage() {
 
         <button
           type="submit"
-          className="rounded bg-brand-primary py-2 text-sm font-semibold text-brand-dark transition hover:bg-brand-accent"
+          className="rounded bg-brand-primary py-2 text-sm font-semibold text-white transition hover:bg-brand-accent"
         >
           Guardar sesión
         </button>
@@ -213,27 +213,29 @@ export default function AthletePage() {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-medium">Histórico reciente</h2>
-        <div className="h-64 w-full rounded-lg border border-white/10 bg-white/5 p-3">
+        <div className="h-64 w-full rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={historicalChart}>
               <XAxis
                 dataKey="date"
-                stroke="#cbd5f5"
+                stroke="#1e293b"
                 tickLine={false}
-                axisLine={{ stroke: "#1f2937" }}
+                axisLine={{ stroke: "#cbd5f5" }}
               />
               <YAxis
-                stroke="#cbd5f5"
+                stroke="#1e293b"
                 tickLine={false}
-                axisLine={{ stroke: "#1f2937" }}
+                axisLine={{ stroke: "#cbd5f5" }}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#0f172a",
-                  borderColor: "#1f2937",
+                  backgroundColor: "#ffffff",
+                  borderColor: "#e2e8f0",
                   borderRadius: 8,
                 }}
-                cursor={{ stroke: "#1f2937" }}
+                labelStyle={{ color: "#0f172a" }}
+                itemStyle={{ color: "#1f2937" }}
+                cursor={{ stroke: "#cbd5f5" }}
               />
               <Line
                 type="monotone"

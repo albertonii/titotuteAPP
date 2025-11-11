@@ -184,10 +184,10 @@ export default function CoachPage() {
         <h1 className="text-2xl font-semibold text-brand-primary">
           Coach Mode
         </h1>
-        <p className="text-sm text-white/70">
+        <p className="text-sm text-slate-600">
           Registra métricas rápidamente para cada atleta. Funciona sin conexión.
         </p>
-        <span className="text-xs text-brand-accent">{status}</span>
+        <span className="text-xs text-brand-primary">{status}</span>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -197,7 +197,7 @@ export default function CoachPage() {
             <form
               key={athlete.id}
               onSubmit={(event) => handleSubmit(event, athlete)}
-              className="flex flex-col gap-3 rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur"
+              className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
             >
               <h2 className="text-lg font-medium">{athlete.name}</h2>
               <div className="grid grid-cols-2 gap-3 text-sm">
@@ -206,7 +206,7 @@ export default function CoachPage() {
                   <input
                     type="number"
                     inputMode="decimal"
-                    className="rounded bg-white/10 p-2 text-white"
+                    className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
                     value={form.weight}
                     onChange={(event) =>
                       handleChange(athlete.id, "weight", event.target.value)
@@ -219,7 +219,7 @@ export default function CoachPage() {
                     type="number"
                     min={1}
                     max={10}
-                    className="rounded bg-white/10 p-2 text-white"
+                    className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
                     value={form.quality}
                     onChange={(event) =>
                       handleChange(athlete.id, "quality", event.target.value)
@@ -232,7 +232,7 @@ export default function CoachPage() {
                     type="number"
                     min={1}
                     max={10}
-                    className="rounded bg-white/10 p-2 text-white"
+                    className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
                     value={form.rpe}
                     onChange={(event) =>
                       handleChange(athlete.id, "rpe", event.target.value)
@@ -244,7 +244,7 @@ export default function CoachPage() {
                   <input
                     type="number"
                     min={0}
-                    className="rounded bg-white/10 p-2 text-white"
+                    className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
                     value={form.duration}
                     onChange={(event) =>
                       handleChange(athlete.id, "duration", event.target.value)
@@ -256,7 +256,7 @@ export default function CoachPage() {
               <label className="flex flex-col gap-1 text-sm">
                 <span>Energía</span>
                 <select
-                  className="rounded bg-white/10 p-2 text-white"
+                  className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
                   value={form.energy}
                   onChange={(event) =>
                     handleChange(athlete.id, "energy", event.target.value)
@@ -275,7 +275,7 @@ export default function CoachPage() {
                   onChange={(event) =>
                     handleChange(athlete.id, "present", event.target.checked)
                   }
-                  className="h-5 w-5 rounded border-none bg-white/10"
+                  className="h-5 w-5 rounded border border-slate-300 text-brand-primary focus:ring-brand-primary"
                 />
                 Check-in realizado
               </label>
@@ -283,7 +283,7 @@ export default function CoachPage() {
               <label className="flex flex-col gap-1 text-sm">
                 <span>Notas</span>
                 <textarea
-                  className="rounded bg-white/10 p-2 text-white"
+                  className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
                   rows={2}
                   value={form.notes}
                   onChange={(event) =>
@@ -294,7 +294,7 @@ export default function CoachPage() {
 
               <button
                 type="submit"
-                className="rounded bg-brand-primary py-2 text-sm font-semibold text-brand-dark transition hover:bg-brand-accent"
+                className="rounded bg-brand-primary py-2 text-sm font-semibold text-white transition hover:bg-brand-accent"
               >
                 Guardar en dispositivo
               </button>

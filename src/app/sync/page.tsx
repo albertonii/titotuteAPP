@@ -38,27 +38,27 @@ export default function SyncPage() {
         <h1 className="text-2xl font-semibold text-brand-primary">
           Sincronización
         </h1>
-        <p className="text-sm text-white/70">
+        <p className="text-sm text-slate-600">
           Control manual para depuración y monitoreo del outbox.
         </p>
-        <p className="text-xs text-brand-accent">
+        <p className="text-xs text-brand-primary">
           Última sincronización:{" "}
           {lastSync ? new Date(lastSync).toLocaleString("es-AR") : "Nunca"}
         </p>
-        <p className="text-xs text-white/60">Acciones en cola: {queueCount}</p>
-        <p className="text-xs text-white/60">Estado actual: {status}</p>
+        <p className="text-xs text-slate-500">Acciones en cola: {queueCount}</p>
+        <p className="text-xs text-slate-500">Estado actual: {status}</p>
       </header>
 
       <button
         onClick={handleSync}
         disabled={localSyncing}
-        className="w-full rounded bg-brand-primary py-2 text-sm font-semibold text-brand-dark transition hover:bg-brand-accent disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded bg-brand-primary py-2 text-sm font-semibold text-white transition hover:bg-brand-accent disabled:cursor-not-allowed disabled:opacity-60"
       >
         {localSyncing ? "Sincronizando..." : "Forzar sincronización"}
       </button>
 
       {currentError ? (
-        <p className="text-sm text-red-400">Error: {currentError}</p>
+        <p className="text-sm text-red-500">Error: {currentError}</p>
       ) : null}
     </section>
   );

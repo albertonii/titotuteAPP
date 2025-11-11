@@ -156,22 +156,22 @@ export default function AdminPage() {
         <h1 className="text-2xl font-semibold text-brand-primary">
           Gestión de usuarios
         </h1>
-        <p className="text-sm text-white/70">
+        <p className="text-sm text-slate-600">
           Crea y sincroniza usuarios de manera local-first. Al volver la
           conexión, los registros se enviarán a Supabase.
         </p>
-        <span className="text-xs text-brand-accent">{status}</span>
+        <span className="text-xs text-brand-primary">{status}</span>
       </header>
 
       <form
         onSubmit={handleSubmit}
-        className="grid gap-4 rounded-xl border border-white/10 bg-white/5 p-4 text-sm backdrop-blur sm:grid-cols-2"
+        className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm sm:grid-cols-2"
       >
         <label className="flex flex-col gap-1">
           <span>Nombre completo</span>
           <input
             required
-            className="rounded bg-white/10 p-2 text-white"
+            className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
             value={form.name}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, name: event.target.value }))
@@ -184,7 +184,7 @@ export default function AdminPage() {
           <input
             type="email"
             required
-            className="rounded bg-white/10 p-2 text-white"
+            className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
             value={form.email}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, email: event.target.value }))
@@ -195,7 +195,7 @@ export default function AdminPage() {
         <label className="flex flex-col gap-1">
           <span>Rol</span>
           <select
-            className="rounded bg-white/10 p-2 text-white"
+            className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
             value={form.role}
             onChange={(event) =>
               setForm((prev) => ({
@@ -215,7 +215,7 @@ export default function AdminPage() {
           <span>Altura (cm)</span>
           <input
             type="number"
-            className="rounded bg-white/10 p-2 text-white"
+            className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
             value={form.height}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, height: event.target.value }))
@@ -227,7 +227,7 @@ export default function AdminPage() {
           <span>Fecha de nacimiento</span>
           <input
             type="date"
-            className="rounded bg-white/10 p-2 text-white"
+            className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
             value={form.birthdate}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, birthdate: event.target.value }))
@@ -237,7 +237,7 @@ export default function AdminPage() {
         <label className="flex flex-col gap-1">
           <span>Objetivo</span>
           <input
-            className="rounded bg-white/10 p-2 text-white"
+            className="rounded border border-slate-200 bg-slate-50 p-2 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
             value={form.goal}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, goal: event.target.value }))
@@ -249,7 +249,7 @@ export default function AdminPage() {
           <button
             type="submit"
             disabled={loading}
-            className="rounded bg-brand-primary px-4 py-2 font-semibold text-brand-dark transition hover:bg-brand-accent disabled:opacity-60"
+            className="rounded bg-brand-primary px-4 py-2 font-semibold text-white transition hover:bg-brand-accent disabled:opacity-60"
           >
             {loading ? "Guardando…" : "Guardar usuario local"}
           </button>
@@ -260,17 +260,17 @@ export default function AdminPage() {
         {groupedByRole.map(({ role, users }) => (
           <div
             key={role}
-            className="rounded-xl border border-white/10 bg-white/5 p-4"
+            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
           >
             <header className="mb-3 flex items-center justify-between">
               <h2 className="text-lg font-semibold capitalize">{role}</h2>
-              <span className="text-xs text-white/60">
+              <span className="text-xs text-slate-500">
                 {users.length} registrados
               </span>
             </header>
             <ul className="flex flex-col gap-3">
               {users.length === 0 ? (
-                <li className="text-xs text-white/40">
+                <li className="text-xs text-slate-400">
                   Sin usuarios en esta categoría.
                 </li>
               ) : (
@@ -280,35 +280,35 @@ export default function AdminPage() {
                   return (
                     <li
                       key={user.id}
-                      className="flex flex-col gap-1 rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-white/80 sm:flex-row sm:items-center sm:justify-between"
+                      className="flex flex-col gap-1 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-700 shadow-sm sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium text-white">
+                        <span className="text-sm font-medium text-slate-900">
                           {user.name}
                         </span>
-                        <span className="text-white/60">{user.email}</span>
-                        <span className="text-white/50">
+                        <span className="text-slate-500">{user.email}</span>
+                        <span className="text-slate-500">
                           Última actualización:{" "}
                           {new Date(user.updated_at).toLocaleString("es-AR")}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         {user.goal ? (
-                          <span className="text-white/60">
+                          <span className="text-slate-500">
                             Meta: {user.goal}
                           </span>
                         ) : null}
                         {pending ? (
-                          <span className="rounded-full bg-amber-500/20 px-2 py-1 text-[11px] text-amber-300">
+                          <span className="rounded-full bg-amber-100 px-2 py-1 text-[11px] text-amber-700">
                             Pendiente de sincronización
                           </span>
                         ) : (
-                          <span className="rounded-full bg-brand-primary/20 px-2 py-1 text-[11px] text-brand-accent">
+                          <span className="rounded-full bg-brand-primary/10 px-2 py-1 text-[11px] text-brand-primary">
                             Sincronizado
                           </span>
                         )}
                         {credential ? (
-                          <span className="rounded-full bg-sky-500/20 px-2 py-1 text-[11px] text-sky-300">
+                          <span className="rounded-full bg-sky-100 px-2 py-1 text-[11px] text-sky-700">
                             Invitación pendiente
                             {credential.last_error
                               ? ` · ${credential.last_error}`

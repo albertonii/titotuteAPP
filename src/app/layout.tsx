@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className="bg-brand-dark text-white">
+      <body className="bg-slate-50 text-slate-900">
         <Providers>
           <div className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 px-4 py-6">
             <MainNav />

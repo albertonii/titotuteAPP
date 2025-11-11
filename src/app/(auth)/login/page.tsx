@@ -46,16 +46,16 @@ export default function LoginPage() {
   };
 
   return (
-    <section className="mx-auto flex w-full max-w-md flex-col gap-6 rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+    <section className="mx-auto flex w-full max-w-md flex-col gap-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
       <header className="flex flex-col gap-1 text-center">
         <h1 className="text-2xl font-semibold text-brand-primary">Iniciar sesión</h1>
-        <p className="text-sm text-white/70">
+        <p className="text-sm text-slate-600">
           Acceso seguro para entrenadores, atletas y staff. Funciona offline con datos sincronizados.
         </p>
       </header>
 
-      <div className="flex flex-col gap-1 text-xs text-white/60">
-        <span className={isOnline ? 'text-brand-accent' : 'text-amber-400'}>
+      <div className="flex flex-col gap-1 text-xs text-slate-500">
+        <span className={isOnline ? 'text-brand-primary' : 'text-amber-600'}>
           {isOnline ? 'Online' : 'Offline'}
         </span>
         <span>
@@ -76,7 +76,7 @@ export default function LoginPage() {
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="rounded bg-white/10 p-3 text-white outline-none ring-brand-primary focus:ring"
+            className="rounded border border-slate-200 bg-slate-50 p-3 text-slate-900 outline-none ring-brand-primary focus:bg-white focus:ring"
           />
         </label>
 
@@ -88,7 +88,7 @@ export default function LoginPage() {
             autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="rounded bg-white/10 p-3 text-white outline-none ring-brand-primary focus:ring"
+            className="rounded border border-slate-200 bg-slate-50 p-3 text-slate-900 outline-none ring-brand-primary focus:bg-white focus:ring"
           />
         </label>
 
@@ -101,7 +101,7 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <footer className="text-center text-xs text-white/50">
+      <footer className="text-center text-xs text-slate-500">
         Consejo: si estás offline, asegúrate de haber iniciado sesión previamente para contar con datos locales.
       </footer>
     </section>

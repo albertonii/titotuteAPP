@@ -21,7 +21,7 @@ export function UserBadge() {
       <button
         type="button"
         onClick={() => router.push('/login')}
-        className="rounded-full border border-brand-primary/60 px-3 py-1 text-xs text-brand-primary transition hover:bg-brand-primary hover:text-brand-dark"
+        className="rounded-full border border-brand-primary/50 px-3 py-1 text-xs text-brand-primary transition hover:bg-brand-primary hover:text-white"
       >
         Ingresar
       </button>
@@ -30,18 +30,18 @@ export function UserBadge() {
 
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary text-sm font-semibold text-brand-dark">
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary text-sm font-semibold text-white shadow-sm">
         {initials}
       </div>
       <div className="flex flex-col leading-tight">
-        <span className="text-xs font-medium text-white">{user.name}</span>
-        <span className="text-[11px] text-white/60 capitalize">{user.role}</span>
+        <span className="text-xs font-medium text-slate-900">{user.name}</span>
+        <span className="text-[11px] text-slate-500 capitalize">{user.role}</span>
       </div>
       <button
         type="button"
         disabled={status === 'loading'}
         onClick={() => signOut().then(() => router.push('/'))}
-        className="rounded-full border border-white/20 px-3 py-1 text-xs text-white/70 transition hover:bg-white/10 disabled:opacity-60"
+        className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-100 disabled:opacity-60"
       >
         Salir
       </button>

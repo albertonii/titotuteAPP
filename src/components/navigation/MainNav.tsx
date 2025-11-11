@@ -38,25 +38,27 @@ export function MainNav() {
   const statusStyle = (() => {
     switch (status) {
       case "offline":
-        return "text-amber-300";
+        return "text-amber-600";
       case "error":
-        return "text-red-300";
+        return "text-red-500";
       case "syncing":
-        return "text-brand-accent animate-pulse";
+        return "text-brand-primary animate-pulse";
       default:
-        return "text-white/60";
+        return "text-slate-500";
     }
   })();
 
   return (
-    <nav className="flex w-full flex-col gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+    <nav className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Image
             src={logoHorizontal}
             alt="Tito & Tute Training"
             priority
-            className="h-8 w-auto"
+            width={200}
+            height={48}
+            className="h-10 w-auto object-contain"
           />
         </div>
         <span className={`text-xs ${statusStyle}`}>{statusLabel}</span>
@@ -71,8 +73,8 @@ export function MainNav() {
                   href={link.href}
                   className={`rounded-full px-3 py-1 transition ${
                     isActive
-                      ? "bg-brand-primary text-brand-dark"
-                      : "text-white/80 hover:text-white"
+                      ? "bg-brand-primary text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   {link.label}
