@@ -52,14 +52,26 @@ export function MainNav() {
     <nav className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Image
-            src={logoHorizontal}
-            alt="Tito & Tute Training"
-            priority
-            width={200}
-            height={48}
-            className="h-10 w-auto object-contain"
-          />
+          <div className="hidden sm:block">
+            <Image
+              src={logoHorizontal}
+              alt="Tito & Tute Training"
+              priority
+              width={260}
+              height={64}
+              className="h-12 w-auto object-contain"
+            />
+          </div>
+          <div className="sm:hidden">
+            <Image
+              src={logoHorizontal}
+              alt="Tito & Tute Training"
+              priority
+              width={200}
+              height={48}
+              className="h-10 w-auto object-contain"
+            />
+          </div>
         </div>
         <span className={`text-xs ${statusStyle}`}>{statusLabel}</span>
       </div>
