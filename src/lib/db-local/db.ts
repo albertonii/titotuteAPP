@@ -78,6 +78,17 @@ export interface OutboxAction {
   retries: number;
 }
 
+export interface PendingCredential {
+  id: string;
+  user_id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  created_at: string;
+  retries: number;
+  last_error?: string;
+}
+
 class LocalDatabase extends Dexie {
   users!: Table<User>;
   mesocycles!: Table<Mesocycle>;
@@ -87,6 +98,7 @@ class LocalDatabase extends Dexie {
   group_members!: Table<GroupMember>;
   attendance!: Table<Attendance>;
   outbox!: Table<OutboxAction>;
+  pending_credentials!: Table<PendingCredential>;
 
   constructor() {
     super("tito_tute_local");
@@ -100,6 +112,10 @@ class LocalDatabase extends Dexie {
       group_members: "id, group_id, user_id",
       attendance: "id, session_id, user_id, updated_at",
       outbox: "id, table, created_at, retries",
+    });
+
+    this.version(2).stores({
+      pending_credentials: "id, email, role, user_id",
     });
   }
 }

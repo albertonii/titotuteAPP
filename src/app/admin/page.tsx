@@ -9,6 +9,10 @@ import {
   listLocalUsers,
 } from "@/lib/services/users";
 import { useSyncStore } from "@/lib/state/sync";
+import {
+  getPendingCredentialMap,
+  queueCredentialInvite,
+} from "@/lib/sync/credentials";
 
 const roles: UserRole[] = ["trainer", "athlete", "nutritionist", "admin"];
 
@@ -34,6 +38,15 @@ export default function AdminPage() {
   useAuthGuard({ allowedRoles: ["admin", "trainer"] });
   const [users, setUsers] = useState<User[]>([]);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [pendingCredentials, setPendingCredentials] = useState<
+    Map<
+      string,
+      {
+        retries: number;
+        last_error?: string;
+      }
+    >
+  >(new Map());
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [status, setStatus] = useState<string>(
     "Registra integrantes y staff para sincronizar con Supabase."
@@ -42,12 +55,14 @@ export default function AdminPage() {
   const refreshQueueCount = useSyncStore((state) => state.refreshQueueCount);
 
   const loadData = async () => {
-    const [list, pending] = await Promise.all([
+    const [list, pending, credentials] = await Promise.all([
       listLocalUsers(),
       getPendingUserIds(),
+      getPendingCredentialMap(),
     ]);
     setUsers(list);
     setPendingIds(pending);
+    setPendingCredentials(credentials);
   };
 
   useEffect(() => {
@@ -60,7 +75,7 @@ export default function AdminPage() {
     event.preventDefault();
     setLoading(true);
     try {
-      await createLocalUser({
+      const user = await createLocalUser({
         name: form.name,
         email: form.email,
         role: form.role,
@@ -68,9 +83,53 @@ export default function AdminPage() {
         birthdate: form.birthdate || undefined,
         goal: form.goal || undefined,
       });
-      setStatus(
-        "Usuario guardado localmente. Se sincronizará cuando haya conexión."
-      );
+      setStatus("Usuario guardado localmente. Procesando invitación…");
+
+      if (navigator.onLine) {
+        try {
+          const response = await fetch("/api/admin/create-user", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: user.email,
+              name: user.name,
+              role: user.role,
+              userId: user.id,
+            }),
+          });
+          if (!response.ok) {
+            throw new Error(
+              (await response.json()).message ?? "No se pudo invitar al usuario."
+            );
+          }
+          setStatus(
+            "Usuario listo. Se envió invitación para configurar acceso en Supabase."
+          );
+        } catch (error) {
+          await queueCredentialInvite({
+            userId: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          });
+          setStatus(
+            `Guardado offline. Invitación pendiente: ${
+              error instanceof Error ? error.message : "Error desconocido"
+            }`
+          );
+        }
+      } else {
+        await queueCredentialInvite({
+          userId: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        });
+        setStatus(
+          "Sin conexión. Invitación a Supabase se enviará automáticamente al reconectar."
+        );
+      }
+
       setForm(DEFAULT_FORM);
       await loadData();
       await refreshQueueCount();
@@ -216,6 +275,7 @@ export default function AdminPage() {
               ) : (
                 users.map((user) => {
                   const pending = pendingIds.has(user.id);
+                  const credential = pendingCredentials.get(user.id);
                   return (
                     <li
                       key={user.id}
@@ -246,6 +306,16 @@ export default function AdminPage() {
                             Sincronizado
                           </span>
                         )}
+                        {credential ? (
+                          <span className="rounded-full bg-sky-500/20 px-2 py-1 text-[11px] text-sky-300">
+                            Invitación pendiente
+                            {credential.last_error
+                              ? ` · ${credential.last_error}`
+                              : credential.retries > 0
+                              ? ` · Reintentos: ${credential.retries}`
+                              : ""}
+                          </span>
+                        ) : null}
                       </div>
                     </li>
                   );

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { runFullSync } from "@/lib/sync/sync";
 import { useSyncStore } from "@/lib/state/sync";
+import { processPendingCredentials } from "@/lib/sync/credentials";
 
 const SYNC_INTERVAL_MS = 30_000;
 
@@ -37,6 +38,7 @@ export const useAutoSync = () => {
         return;
       }
       await refreshQueueCount();
+      await processPendingCredentials();
       if (!abort) {
         setStatus("idle");
       }
