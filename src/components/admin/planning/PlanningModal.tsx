@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 
 interface PlanningModalProps {
@@ -19,6 +20,12 @@ export function PlanningModal({
   children,
 }: PlanningModalProps) {
   const backdropRef = useRef<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -28,14 +35,21 @@ export function PlanningModal({
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [open, onClose]);
 
-  if (!open) {
+  if (!open || !mounted) {
     return null;
   }
 
-  return (
+  const modalContent = (
     <div
       aria-modal="true"
       role="dialog"
@@ -71,4 +85,8 @@ export function PlanningModal({
       </div>
     </div>
   );
+
+  const portalTarget = typeof document !== "undefined" ? document.body : null;
+
+  return portalTarget ? createPortal(modalContent, portalTarget) : modalContent;
 }
