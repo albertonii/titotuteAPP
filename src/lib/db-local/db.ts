@@ -256,6 +256,10 @@ class LocalDatabase extends Dexie {
             item.updated_at = item.updated_at ?? new Date().toISOString();
           });
       });
+
+    this.version(6).stores({
+      pending_credentials: "id, email, role, user_id, created_at",
+    });
   }
 }
 
