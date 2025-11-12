@@ -472,7 +472,7 @@ export const ExerciseCard = ({
                 const repetitions = getValue(row, selectedIndex, 1);
                 return (
                   <article
-                    key={`${exercise.name}-series-mobile-${label ?? index}`}
+                    key={`${exercise.name}-series-mobile-${index}`}
                     className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
                   >
                     <header className="flex items-center justify-between text-xs uppercase tracking-wide text-slate-500">
@@ -507,7 +507,7 @@ export const ExerciseCard = ({
                     const load = getValue(row, selectedIndex);
                     const repetitions = getValue(row, selectedIndex, 1);
                     return (
-                      <tr key={`${exercise.name}-series-${label ?? index}`}>
+                      <tr key={`${exercise.name}-series-${index}`}>
                         <td className="px-3 py-2 font-medium text-slate-700">
                           {label}
                         </td>

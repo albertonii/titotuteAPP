@@ -33,18 +33,8 @@ export default function TrainingPlanner({ trainings }: TrainingPlannerProps) {
 
   const defaultSheet = sheetKeys[0] ?? "";
 
-  const [selectedSheet, setSelectedSheet] = useState<string>(() => {
-    if (typeof window === "undefined") return defaultSheet;
-    const stored = window.localStorage.getItem(STORAGE_SHEET_KEY);
-    return stored && sheetKeys.includes(stored) ? stored : defaultSheet;
-  });
-
-  const [selectedMicro, setSelectedMicro] = useState<number>(() => {
-    if (typeof window === "undefined") return 0;
-    const stored = window.localStorage.getItem(STORAGE_MICRO_KEY);
-    const parsed = stored ? Number.parseInt(stored, 10) : 0;
-    return Number.isNaN(parsed) ? 0 : parsed;
-  });
+  const [selectedSheet, setSelectedSheet] = useState<string>(defaultSheet);
+  const [selectedMicro, setSelectedMicro] = useState<number>(0);
 
   const [exerciseStatuses, setExerciseStatuses] = useState<
     Record<string, ExerciseStatus>
@@ -55,6 +45,23 @@ export default function TrainingPlanner({ trainings }: TrainingPlannerProps) {
   useAuthGuard({
     allowedRoles: ["athlete", "trainer", "admin", "nutritionist"],
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storedSheet = window.localStorage.getItem(STORAGE_SHEET_KEY);
+    const storedMicro = window.localStorage.getItem(STORAGE_MICRO_KEY);
+
+    if (storedSheet && sheetKeys.includes(storedSheet)) {
+      setSelectedSheet(storedSheet);
+    }
+
+    if (storedMicro) {
+      const parsed = Number.parseInt(storedMicro, 10);
+      if (!Number.isNaN(parsed)) {
+        setSelectedMicro(parsed);
+      }
+    }
+  }, [sheetKeys]);
 
   useEffect(() => {
     if (!sheetKeys.length) return;
