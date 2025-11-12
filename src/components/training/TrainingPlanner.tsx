@@ -93,6 +93,17 @@ function getValue(
   return row[idx] ?? null;
 }
 
+function getValueByIndex(
+  row: (string | null)[] | null,
+  microIndex: number,
+  offset = 0
+) {
+  if (!row) return null;
+  const idx = MICRO_INDEXES[microIndex] ?? 2;
+  const target = idx + offset;
+  return row[target] ?? null;
+}
+
 function useExerciseLogs(
   userId: string | undefined,
   sheet: string,
@@ -191,6 +202,93 @@ function ExerciseCard({
       " border-brand-primary/70 bg-brand-primary/10 ring-2 ring-brand-primary/15";
   }
 
+  const plannedSeriesByMicrocycle = useMemo(() => {
+    return training.microcycles.reduce((acc, microName, idx) => {
+      const planned = exercise.series.reduce((total, row) => {
+        const value = getValueByIndex(row, idx);
+        if (!value) return total;
+        if (typeof value === "string" && value.trim() === "") return total;
+        return total + 1;
+      }, 0);
+      acc[microName] = planned || exercise.series.length;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [exercise.series, training.microcycles]);
+
+  const groupedHistory = useMemo(() => {
+    if (!logs.length) return [];
+
+    const groups: Array<{
+      key: string;
+      label: string;
+      microcycle?: string | null;
+      isToday: boolean;
+      entries: Array<{
+        log: ExerciseLog;
+        time: string;
+        deltas: {
+          load?: string | null;
+          reps?: string | null;
+          rir?: string | null;
+        };
+        serie: number;
+        total: number;
+        planned: number;
+      }>;
+    }> = [];
+
+    logs.forEach((log, index) => {
+      const performedAt = new Date(log.performed_at);
+      const dateKey = performedAt.toISOString().split("T")[0];
+      const key = `${dateKey}-${log.microcycle ?? ""}`;
+      let group = groups.find((item) => item.key === key);
+      if (!group) {
+        group = {
+          key,
+          label: HISTORY_HEADER_FORMATTER.format(performedAt),
+          microcycle: log.microcycle,
+          isToday: isSameLocalDay(log.performed_at),
+          entries: [],
+        };
+        groups.push(group);
+      }
+      const previous = logs[index + 1];
+      const targetMicro =
+        log.microcycle ?? training.microcycles[selectedIndex] ?? "";
+      const plannedTotal =
+        plannedSeriesByMicrocycle[targetMicro] ?? exercise.series.length;
+      group.entries.push({
+        log,
+        time: TIME_FORMATTER.format(performedAt),
+        deltas: {
+          load: formatDelta(log.load, previous?.load),
+          reps: formatDelta(log.reps, previous?.reps),
+          rir: formatDelta(log.rir, previous?.rir),
+        },
+        serie: group.entries.length + 1,
+        total: group.entries.length + 1,
+        planned: plannedTotal,
+      });
+    });
+
+    groups.forEach((group) => {
+      const total = group.entries.length;
+      group.entries = group.entries.map((entry, idx) => ({
+        ...entry,
+        serie: idx + 1,
+        total: Math.max(entry.planned, total),
+      }));
+    });
+
+    return groups;
+  }, [
+    logs,
+    plannedSeriesByMicrocycle,
+    exercise.series.length,
+    selectedIndex,
+    training.microcycles,
+  ]);
+
   useEffect(() => {
     if (!onStatusChange) return;
     onStatusChange(exercise.name, {
@@ -225,67 +323,6 @@ function ExerciseCard({
     if (delta.startsWith("+")) return "text-emerald-600";
     return "text-rose-500";
   };
-
-  const groupedHistory = useMemo(() => {
-    if (!logs.length) return [];
-    const groups: Array<{
-      key: string;
-      label: string;
-      microcycle?: string | null;
-      isToday: boolean;
-      entries: Array<{
-        log: ExerciseLog;
-        time: string;
-        deltas: {
-          load?: string | null;
-          reps?: string | null;
-          rir?: string | null;
-        };
-        serie: number;
-        total: number;
-      }>;
-    }> = [];
-
-    logs.forEach((log, index) => {
-      const performedAt = new Date(log.performed_at);
-      const dateKey = performedAt.toISOString().split("T")[0];
-      const key = `${dateKey}-${log.microcycle ?? ""}`;
-      let group = groups.find((item) => item.key === key);
-      if (!group) {
-        group = {
-          key,
-          label: HISTORY_HEADER_FORMATTER.format(performedAt),
-          microcycle: log.microcycle,
-          isToday: isSameLocalDay(log.performed_at),
-          entries: [],
-        };
-        groups.push(group);
-      }
-      const previous = logs[index + 1];
-      group.entries.push({
-        log,
-        time: TIME_FORMATTER.format(performedAt),
-        deltas: {
-          load: formatDelta(log.load, previous?.load),
-          reps: formatDelta(log.reps, previous?.reps),
-          rir: formatDelta(log.rir, previous?.rir),
-        },
-        serie: group.entries.length + 1,
-        total: group.entries.length + 1,
-      });
-    });
-
-    groups.forEach((group) => {
-      const total = group.entries.length;
-      group.entries = group.entries.map((entry, idx) => ({
-        ...entry,
-        serie: idx + 1,
-        total,
-      }));
-    });
-
-    return groups;
-  }, [logs]);
 
   const handleChange =
     (field: keyof ExerciseLogFormState) =>
@@ -947,36 +984,43 @@ interface WarmupSectionProps {
 
 function WarmupSection({ warmups }: WarmupSectionProps) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm sm:p-5">
-      <h2 className="text-lg font-semibold text-slate-900">Calentamiento</h2>
-      <ul className="mt-3 space-y-3 text-sm text-slate-600">
-        {warmups.map((warmup, index) => (
-          <li
-            key={`${warmup.description}-${index}`}
-            className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3"
-          >
-            <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-xs font-semibold text-brand-primary">
-              {index + 1}
-            </span>
-            <div className="flex flex-col gap-2">
-              <span className="font-medium text-slate-700">
-                {warmup.description}
+    <details className="rounded-3xl border border-slate-200 bg-white/95 shadow-sm">
+      <summary className="flex cursor-pointer select-none items-center justify-between gap-2 rounded-3xl px-4 py-3 text-left text-lg font-semibold text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 sm:px-5">
+        Calentamiento
+        <span className="text-sm font-medium text-brand-primary/70">
+          mostrar/ocultar
+        </span>
+      </summary>
+      <div className="px-4 pb-4 pt-2 sm:px-5">
+        <ul className="space-y-3 text-sm text-slate-600">
+          {warmups.map((warmup, index) => (
+            <li
+              key={`${warmup.description}-${index}`}
+              className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3"
+            >
+              <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-xs font-semibold text-brand-primary">
+                {index + 1}
               </span>
-              {warmup.resource ? (
-                <a
-                  href={warmup.resource}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex w-fit items-center gap-1 text-xs font-semibold text-brand-primary underline underline-offset-4"
-                >
-                  Vídeo / Referencia
-                </a>
-              ) : null}
-            </div>
-          </li>
-        ))}
-      </ul>
-    </section>
+              <div className="flex flex-col gap-2">
+                <span className="font-medium text-slate-700">
+                  {warmup.description}
+                </span>
+                {warmup.resource ? (
+                  <a
+                    href={warmup.resource}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-fit items-center gap-1 text-xs font-semibold text-brand-primary underline underline-offset-4"
+                  >
+                    Vídeo / Referencia
+                  </a>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </details>
   );
 }
 
@@ -1058,15 +1102,6 @@ export default function TrainingPlanner({ trainings }: TrainingPlannerProps) {
   return (
     <section className="w-full">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 sm:py-5 sm:gap-6 sm:px-5 lg:max-w-5xl lg:px-8">
-        <TrainingHero
-          title={training.title}
-          phase={training.phase}
-          microcycle={selectedMicrocycleLabel}
-          totalExercises={totalExercises}
-          completedExercises={completedExercises}
-          lastUpdate={latestUpdateIso}
-        />
-
         <PlanSelector
           sheetKeys={sheetKeys}
           selectedSheet={selectedSheet}
@@ -1082,6 +1117,15 @@ export default function TrainingPlanner({ trainings }: TrainingPlannerProps) {
           onSelectIndex={setSelectedMicro}
           completedExercises={completedExercises}
           totalExercises={totalExercises}
+        />
+
+        <TrainingHero
+          title={training.title}
+          phase={training.phase}
+          microcycle={selectedMicrocycleLabel}
+          totalExercises={totalExercises}
+          completedExercises={completedExercises}
+          lastUpdate={latestUpdateIso}
         />
 
         {training.warmups.length > 0 ? (
