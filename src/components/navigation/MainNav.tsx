@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { useSyncStore } from "@/lib/state/sync";
 import { UserBadge } from "./UserBadge";
 import logoHorizontal from "../../../public/brand/logo_horizontal.png";
@@ -10,6 +11,7 @@ import { useAuthStore } from "@/lib/state/auth";
 
 export function MainNav() {
   const pathname = usePathname();
+  const [activePath, setActivePath] = useState<string>("/");
   const { status, queueCount } = useSyncStore((state) => ({
     status: state.status,
     queueCount: state.queueCount,
@@ -43,31 +45,59 @@ export function MainNav() {
   })();
 
   const navigationLinks = () => {
-    const links = [
-      { href: "/", label: "Inicio" },
-      { href: "/sync", label: "Sync" },
-    ];
+    const base = [{ href: "/", label: "Inicio" }];
 
     if (user?.role === "athlete") {
-      links.push({ href: "/training", label: "Plan" });
-      links.push({ href: "/athlete", label: "Atleta" });
+      return [
+        ...base,
+        { href: "/training", label: "Plan" },
+        { href: "/athlete", label: "Ficha" },
+      ];
     }
 
     if (user?.role === "trainer") {
-      links.push({ href: "/coach", label: "Coach" });
-      links.push({ href: "/admin", label: "Gestión" });
+      return [
+        ...base,
+        { href: "/coach", label: "Coach" },
+        { href: "/training", label: "Plan" },
+      ];
     }
 
     if (user?.role === "admin") {
-      links.push({ href: "/coach", label: "Coach" });
-      links.push({ href: "/training", label: "Plan" });
-      links.push({ href: "/admin", label: "Gestión" });
+      return [
+        ...base,
+        { href: "/training", label: "Plan" },
+        { href: "/coach", label: "Coach" },
+        { href: "/admin", label: "Gestión" },
+        {
+          href: "/sync",
+          label: "Sincronización",
+        },
+      ];
     }
 
-    return links;
+    // invitado / sin rol
+    return base;
   };
 
-  const links = navigationLinks();
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("navigation:last", pathname);
+    }
+    setActivePath(pathname);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("navigation:last");
+    if (stored) {
+      setActivePath(stored);
+    } else {
+      setActivePath(pathname);
+    }
+  }, []);
+
+  const links = useMemo(() => navigationLinks(), [user?.role]);
 
   return (
     <nav className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between">
@@ -99,7 +129,7 @@ export function MainNav() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
         <ul className="flex items-center gap-3 overflow-x-auto">
           {links.map((link) => {
-            const isActive = pathname === link.href;
+            const isActive = activePath === link.href;
             return (
               <li key={link.href}>
                 <Link
@@ -109,6 +139,7 @@ export function MainNav() {
                       ? "bg-brand-primary text-white shadow-sm"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
+                  onClick={() => setActivePath(link.href)}
                 >
                   {link.label}
                 </Link>
@@ -116,7 +147,15 @@ export function MainNav() {
             );
           })}
         </ul>
-        <UserBadge />
+        <div className="flex items-center gap-3">
+          <Link
+            href="/sync"
+            className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-500 transition hover:border-brand-primary/40 hover:text-brand-primary"
+          >
+            Estado sync
+          </Link>
+          <UserBadge />
+        </div>
       </div>
     </nav>
   );
