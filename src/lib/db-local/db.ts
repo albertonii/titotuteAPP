@@ -146,6 +146,30 @@ export interface ExerciseLog {
   updated_at: string;
 }
 
+export type InjurySeverity = "leve" | "moderada" | "grave" | "recuperado";
+
+export interface InjuryLog {
+  id: string;
+  user_id: string;
+  area: string;
+  severity: InjurySeverity;
+  start_date: string;
+  end_date?: string | null;
+  notes?: string | null;
+  updated_at: string;
+}
+
+export interface NutritionProfile {
+  id: string;
+  user_id: string;
+  goal?: string | null;
+  kcal_target?: number | null;
+  protein_target?: number | null;
+  carbs_target?: number | null;
+  fats_target?: number | null;
+  updated_at: string;
+}
+
 class LocalDatabase extends Dexie {
   users!: Table<User>;
   macrocycles!: Table<Macrocycle>;
@@ -159,6 +183,8 @@ class LocalDatabase extends Dexie {
   outbox!: Table<OutboxAction>;
   pending_credentials!: Table<PendingCredential>;
   exercise_logs!: Table<ExerciseLog>;
+  injury_logs!: Table<InjuryLog>;
+  nutrition_profiles!: Table<NutritionProfile>;
 
   constructor() {
     super("tito_tute_local");
@@ -208,6 +234,26 @@ class LocalDatabase extends Dexie {
           .modify((item: any) => {
             item.status = item.status ?? "scheduled";
             item.order_index = item.order_index ?? 0;
+          });
+      });
+
+    this.version(5)
+      .stores({
+        injury_logs: "id, user_id, start_date, updated_at",
+        nutrition_profiles: "id, user_id, updated_at",
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table("injury_logs")
+          .toCollection()
+          .modify((item: any) => {
+            item.updated_at = item.updated_at ?? new Date().toISOString();
+          });
+        await tx
+          .table("nutrition_profiles")
+          .toCollection()
+          .modify((item: any) => {
+            item.updated_at = item.updated_at ?? new Date().toISOString();
           });
       });
   }

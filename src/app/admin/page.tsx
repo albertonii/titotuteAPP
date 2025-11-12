@@ -359,7 +359,7 @@ export default function AdminPage() {
           Panel de gestión
         </h1>
         <p className="text-sm text-slate-600">
-          Administra el plan deportivo y los perfiles del staff con un enfoque
+          Administra el plan deportivo y los perfiles del staff con un enfoquea
           offline-first.
         </p>
       </header>

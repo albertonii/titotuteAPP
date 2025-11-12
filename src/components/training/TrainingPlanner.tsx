@@ -348,7 +348,7 @@ function ExerciseCard({
             </p>
           )}
         </div>
-        <span className="hidden shrink-0 text-lg text-slate-400 transition group-open:rotate-180 sm:block">
+        <span className="flex shrink-0 items-center text-lg text-slate-400 transition group-open:rotate-180 sm:block">
           ▼
         </span>
       </summary>
@@ -407,36 +407,65 @@ function ExerciseCard({
         </details>
 
         {exercise.series.length > 0 ? (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-            <table className="w-full min-w-[320px] text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                <tr className="text-left text-slate-500">
-                  <th className="px-2 py-2">Serie</th>
-                  <th className="px-2 py-2">Carga</th>
-                  <th className="px-2 py-2">Reps / Indicaciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {exercise.series.map((row, index) => {
-                  const label = row[1];
-                  const load = getValue(row, selectedIndex);
-                  const repetitions = getValue(row, selectedIndex, 1);
-                  return (
-                    <tr key={`${exercise.name}-series-${label ?? index}`}>
-                      <td className="px-2 py-2 font-medium text-slate-700">
+          <div className="rounded-xl border border-slate-200 bg-white">
+            <div className="grid gap-2 p-3 text-sm text-slate-700 sm:hidden">
+              {exercise.series.map((row, index) => {
+                const label = row[1];
+                const load = getValue(row, selectedIndex);
+                const repetitions = getValue(row, selectedIndex, 1);
+                return (
+                  <article
+                    key={`${exercise.name}-series-mobile-${label ?? index}`}
+                    className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
+                  >
+                    <header className="flex items-center justify-between text-xs uppercase tracking-wide text-slate-500">
+                      <span className="font-semibold text-slate-600">
                         {label}
-                      </td>
-                      <td className="px-2 py-2 text-slate-800">
-                        {load ?? "—"}
-                      </td>
-                      <td className="px-2 py-2 text-slate-800">
-                        {repetitions ?? "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </span>
+                      {load ? (
+                        <span className="rounded-full bg-white px-2 py-0.5 font-semibold text-brand-primary">
+                          {load}
+                        </span>
+                      ) : null}
+                    </header>
+                    <p className="mt-2 text-sm text-slate-700">
+                      {repetitions ?? "—"}
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full min-w-[320px] text-sm">
+                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr className="text-left text-slate-500">
+                    <th className="px-3 py-3">Serie</th>
+                    <th className="px-3 py-3">Carga</th>
+                    <th className="px-3 py-3">Reps / Indicaciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {exercise.series.map((row, index) => {
+                    const label = row[1];
+                    const load = getValue(row, selectedIndex);
+                    const repetitions = getValue(row, selectedIndex, 1);
+                    return (
+                      <tr key={`${exercise.name}-series-${label ?? index}`}>
+                        <td className="px-3 py-2 font-medium text-slate-700">
+                          {label}
+                        </td>
+                        <td className="px-3 py-2 text-slate-800">
+                          {load ?? "—"}
+                        </td>
+                        <td className="px-3 py-2 text-slate-800">
+                          {repetitions ?? "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : null}
       </div>
@@ -776,7 +805,7 @@ function PlanSelector({
             Elige el plan asignado para hoy.
           </p>
         </div>
-        <div className="flex w-full gap-2 overflow-x-auto pb-1">
+        <div className="flex w-full gap-2 overflow-x-auto pb-2 pt-1 scroll-smooth snap-x snap-mandatory">
           {sheetKeys.map((sheet) => {
             const isActive = sheet === selectedSheet;
             return (
@@ -785,7 +814,7 @@ function PlanSelector({
                 type="button"
                 onClick={() => onSelectSheet(sheet)}
                 className={
-                  "whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition " +
+                  "whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition snap-start " +
                   (isActive
                     ? "border-brand-primary bg-brand-primary text-white shadow"
                     : "border-slate-200 bg-white text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary")
@@ -829,7 +858,7 @@ function MicroSelector({
             </p>
           </div>
         </div>
-        <div className="flex w-full gap-2 overflow-x-auto pb-1">
+        <div className="flex w-full gap-2 overflow-x-auto pb-2 pt-1 scroll-smooth snap-x snap-mandatory">
           {microcycles.map((micro, index) => {
             const isActive = selectedIndex === index;
             return (
@@ -838,7 +867,7 @@ function MicroSelector({
                 type="button"
                 onClick={() => onSelectIndex(index)}
                 className={
-                  "rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide transition " +
+                  "rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide transition snap-start " +
                   (isActive
                     ? "bg-brand-primary text-white shadow"
                     : "bg-slate-100 text-slate-600 hover:bg-brand-primary/10 hover:text-brand-primary")
