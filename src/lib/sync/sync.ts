@@ -30,6 +30,18 @@ export const syncPush = async (): Promise<number> => {
   if (!supabase || (typeof navigator !== "undefined" && !navigator.onLine)) {
     return 0;
   }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    console.info(
+      "[sync] Supabase session not found; skipping push until login"
+    );
+    return 0;
+  }
+
   const outboxEntries = await db.outbox.orderBy("created_at").toArray();
   let pushed = 0;
 
