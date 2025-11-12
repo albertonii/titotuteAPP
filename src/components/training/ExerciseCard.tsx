@@ -668,57 +668,63 @@ export const ExerciseCard = ({
                                 </span>
                               </div>
                             </div>
-                            <div className="mt-2 grid gap-2 text-xs text-slate-600 sm:mt-0 sm:w-auto sm:grid-cols-3 sm:gap-3">
-                              <div className="rounded-lg bg-slate-50 px-2 py-2">
+                            <div className="mt-2 flex flex-col gap-2 text-xs text-slate-600 sm:mt-0 sm:w-auto grid grid-cols-3 sm:gap-3">
+                              <div className="rounded-lg bg-slate-50 px-3 py-2 sm:px-2 flex flex-col justify-between">
                                 <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                                   Carga
                                 </p>
-                                <p className="text-sm font-semibold text-slate-700">
-                                  {log.load ?? "—"}
-                                </p>
-                                {deltas.load ? (
-                                  <p
-                                    className={`text-xs font-semibold ${deltaTone(
-                                      deltas.load
-                                    )}`}
-                                  >
-                                    {deltas.load}
+                                <div className="mt-1 flex items-center justify-between gap-2 sm:flex-col sm:items-start">
+                                  <p className="text-sm font-semibold text-slate-700">
+                                    {log.load ?? "—"}
                                   </p>
-                                ) : null}
+                                  {deltas.load ? (
+                                    <span
+                                      className={`text-xs font-semibold ${deltaTone(
+                                        deltas.load
+                                      )}`}
+                                    >
+                                      {deltas.load}
+                                    </span>
+                                  ) : null}
+                                </div>
                               </div>
-                              <div className="rounded-lg bg-slate-50 px-2 py-2">
+                              <div className="rounded-lg bg-slate-50 px-3 py-2 sm:px-2 flex flex-col justify-between">
                                 <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                                   Reps / Indicaciones
                                 </p>
-                                <p className="text-sm font-semibold text-slate-700">
-                                  {log.reps ?? "—"}
-                                </p>
-                                {deltas.reps ? (
-                                  <p
-                                    className={`text-xs font-semibold ${deltaTone(
-                                      deltas.reps
-                                    )}`}
-                                  >
-                                    {deltas.reps}
+                                <div className="mt-1 flex items-center justify-between gap-2 sm:flex-col sm:items-start">
+                                  <p className="text-sm font-semibold text-slate-700">
+                                    {log.reps ?? "—"}
                                   </p>
-                                ) : null}
+                                  {deltas.reps ? (
+                                    <span
+                                      className={`text-xs font-semibold ${deltaTone(
+                                        deltas.reps
+                                      )}`}
+                                    >
+                                      {deltas.reps}
+                                    </span>
+                                  ) : null}
+                                </div>
                               </div>
-                              <div className="rounded-lg bg-slate-50 px-2 py-2">
+                              <div className="rounded-lg bg-slate-50 px-3 py-2 sm:px-2 flex flex-col justify-between">
                                 <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                                   RIR / Sensación
                                 </p>
-                                <p className="text-sm font-semibold text-slate-700">
-                                  {log.rir ?? "—"}
-                                </p>
-                                {deltas.rir ? (
-                                  <p
-                                    className={`text-xs font-semibold ${deltaTone(
-                                      deltas.rir
-                                    )}`}
-                                  >
-                                    {deltas.rir}
+                                <div className="mt-1 flex items-center justify-between gap-2 sm:flex-col sm:items-start">
+                                  <p className="text-sm font-semibold text-slate-700">
+                                    {log.rir ?? "—"}
                                   </p>
-                                ) : null}
+                                  {deltas.rir ? (
+                                    <span
+                                      className={`text-xs font-semibold ${deltaTone(
+                                        deltas.rir
+                                      )}`}
+                                    >
+                                      {deltas.rir}
+                                    </span>
+                                  ) : null}
+                                </div>
                               </div>
                             </div>
                             {log.notes ? (
