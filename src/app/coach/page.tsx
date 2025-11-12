@@ -211,6 +211,15 @@ export default function CoachPage() {
     Record<string, AthleteDetail>
   >({});
 
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove("dark");
+    root.classList.add("light");
+    return () => {
+      root.classList.remove("light");
+    };
+  }, []);
+
   const refreshIndicator = useCallback(async (athleteId: string) => {
     const [progressList, attendanceList] = await Promise.all([
       db.athlete_progress
@@ -329,7 +338,9 @@ export default function CoachPage() {
     >;
     const dominantEnergy =
       energyEntries.length > 0
-        ? (energyEntries.sort((a, b) => b[1] - a[1])[0][0] as AthleteProgress["energy_level"])
+        ? (energyEntries.sort(
+            (a, b) => b[1] - a[1]
+          )[0][0] as AthleteProgress["energy_level"])
         : undefined;
 
     setAthleteDetails((prev) => ({
