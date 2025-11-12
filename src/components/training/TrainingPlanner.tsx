@@ -305,8 +305,8 @@ function ExerciseCard({
   };
 
   return (
-    <details className="group rounded-2xl border border-slate-200 bg-white/90 shadow-sm transition hover:border-brand-primary/40 hover:shadow-md">
-      <summary className="flex cursor-pointer select-none flex-col gap-3 rounded-2xl px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/50 sm:flex-row sm:items-center sm:justify-between">
+    <details className="group w-full rounded-2xl border border-slate-200 bg-white/90 shadow-sm transition hover:border-brand-primary/40 hover:shadow-md">
+      <summary className="flex w-full cursor-pointer select-none flex-col gap-3 rounded-2xl px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/50 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex w-full flex-col gap-2">
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col gap-1">
@@ -353,7 +353,7 @@ function ExerciseCard({
         </span>
       </summary>
 
-      <div className="grid gap-4 border-t border-slate-200 px-4 pb-4 pt-3">
+      <div className="grid w-full gap-4 border-t border-slate-200 px-4 pb-4 pt-3">
         <details className="group rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3 text-sm shadow-inner">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-slate-700 transition group-open:text-brand-primary">
             Plan de trabajo
@@ -805,7 +805,7 @@ function PlanSelector({
             Elige el plan asignado para hoy.
           </p>
         </div>
-        <div className="flex w-full gap-2 overflow-x-auto pb-2 pt-1 scroll-smooth snap-x snap-mandatory">
+        <div className="flex w-full flex-wrap gap-2 pb-1 pt-1">
           {sheetKeys.map((sheet) => {
             const isActive = sheet === selectedSheet;
             return (
@@ -814,7 +814,7 @@ function PlanSelector({
                 type="button"
                 onClick={() => onSelectSheet(sheet)}
                 className={
-                  "whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition snap-start " +
+                  "rounded-full border px-4 py-2 text-sm font-medium transition " +
                   (isActive
                     ? "border-brand-primary bg-brand-primary text-white shadow"
                     : "border-slate-200 bg-white text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary")
@@ -858,7 +858,7 @@ function MicroSelector({
             </p>
           </div>
         </div>
-        <div className="flex w-full gap-2 overflow-x-auto pb-2 pt-1 scroll-smooth snap-x snap-mandatory">
+        <div className="flex w-full flex-wrap gap-2 pb-1 pt-1">
           {microcycles.map((micro, index) => {
             const isActive = selectedIndex === index;
             return (
@@ -867,7 +867,7 @@ function MicroSelector({
                 type="button"
                 onClick={() => onSelectIndex(index)}
                 className={
-                  "rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide transition snap-start " +
+                  "rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide transition " +
                   (isActive
                     ? "bg-brand-primary text-white shadow"
                     : "bg-slate-100 text-slate-600 hover:bg-brand-primary/10 hover:text-brand-primary")
@@ -997,49 +997,51 @@ export default function TrainingPlanner({ trainings }: TrainingPlannerProps) {
     training.microcycles[selectedMicro] ?? training.microcycles[0] ?? "";
 
   return (
-    <section className="flex flex-col gap-6 py-6">
-      <TrainingHero
-        title={training.title}
-        phase={training.phase}
-        microcycle={selectedMicrocycleLabel}
-        totalExercises={totalExercises}
-        completedExercises={completedExercises}
-        lastUpdate={latestUpdateIso}
-      />
+    <section className="w-full">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6 sm:px-6 lg:max-w-5xl lg:px-8">
+        <TrainingHero
+          title={training.title}
+          phase={training.phase}
+          microcycle={selectedMicrocycleLabel}
+          totalExercises={totalExercises}
+          completedExercises={completedExercises}
+          lastUpdate={latestUpdateIso}
+        />
 
-      <PlanSelector
-        sheetKeys={sheetKeys}
-        selectedSheet={selectedSheet}
-        onSelectSheet={(sheet) => {
-          setSelectedSheet(sheet);
-          setSelectedMicro(0);
-        }}
-      />
+        <PlanSelector
+          sheetKeys={sheetKeys}
+          selectedSheet={selectedSheet}
+          onSelectSheet={(sheet) => {
+            setSelectedSheet(sheet);
+            setSelectedMicro(0);
+          }}
+        />
 
-      <MicroSelector
-        microcycles={training.microcycles}
-        selectedIndex={selectedMicro}
-        onSelectIndex={setSelectedMicro}
-        completedExercises={completedExercises}
-        totalExercises={totalExercises}
-      />
+        <MicroSelector
+          microcycles={training.microcycles}
+          selectedIndex={selectedMicro}
+          onSelectIndex={setSelectedMicro}
+          completedExercises={completedExercises}
+          totalExercises={totalExercises}
+        />
 
-      {training.warmups.length > 0 ? (
-        <WarmupSection warmups={training.warmups} />
-      ) : null}
+        {training.warmups.length > 0 ? (
+          <WarmupSection warmups={training.warmups} />
+        ) : null}
 
-      <section className="grid gap-6">
-        {training.exercises.map((exercise) => (
-          <ExerciseCard
-            key={`${training.sheet}-${exercise.name}`}
-            exercise={exercise}
-            training={training}
-            selectedIndex={selectedMicro}
-            userId={user?.id}
-            onStatusChange={handleExerciseStatusChange}
-          />
-        ))}
-      </section>
+        <section className="flex flex-col gap-5">
+          {training.exercises.map((exercise) => (
+            <ExerciseCard
+              key={`${training.sheet}-${exercise.name}`}
+              exercise={exercise}
+              training={training}
+              selectedIndex={selectedMicro}
+              userId={user?.id}
+              onStatusChange={handleExerciseStatusChange}
+            />
+          ))}
+        </section>
+      </div>
     </section>
   );
 }
