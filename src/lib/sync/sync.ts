@@ -47,6 +47,14 @@ export const syncPush = async (): Promise<number> => {
 
   for (const entry of outboxEntries) {
     try {
+      if (entry.table === "users") {
+        console.info(
+          "[sync] Skipping users push; handled via credential invite endpoint"
+        );
+        await db.outbox.delete(entry.id);
+        continue;
+      }
+
       if (entry.operation === "delete") {
         const payload = entry.payload as { id?: string };
         if (!payload?.id) {
