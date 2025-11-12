@@ -470,9 +470,10 @@ export const ExerciseCard = ({
                 const label = row[1];
                 const load = getValue(row, selectedIndex);
                 const repetitions = getValue(row, selectedIndex, 1);
+                const uniqueKey = `${training.sheet}-${selectedIndex}-series-mobile-${index}`;
                 return (
                   <article
-                    key={`${exercise.name}-series-mobile-${index}`}
+                    key={uniqueKey}
                     className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
                   >
                     <header className="flex items-center justify-between text-xs uppercase tracking-wide text-slate-500">
@@ -506,8 +507,9 @@ export const ExerciseCard = ({
                     const label = row[1];
                     const load = getValue(row, selectedIndex);
                     const repetitions = getValue(row, selectedIndex, 1);
+                    const uniqueKey = `${training.sheet}-${selectedIndex}-series-desktop-${index}`;
                     return (
-                      <tr key={`${exercise.name}-series-${index}`}>
+                      <tr key={uniqueKey}>
                         <td className="px-3 py-2 font-medium text-slate-700">
                           {label}
                         </td>
