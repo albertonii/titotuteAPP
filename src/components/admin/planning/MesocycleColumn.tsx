@@ -71,9 +71,16 @@ export function MesocycleColumn({
             const isSelected = mesocycle.id === selectedId;
             return (
               <li key={mesocycle.id}>
-                <button
-                  type="button"
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelect(mesocycle.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onSelect(mesocycle.id);
+                    }
+                  }}
                   className={`flex w-full flex-col gap-2 rounded-xl border bg-white p-4 text-left text-sm shadow-sm transition ${
                     isSelected
                       ? "border-brand-primary/60 ring-2 ring-brand-primary/20"
@@ -142,7 +149,7 @@ export function MesocycleColumn({
                       Eliminar
                     </button>
                   </div>
-                </button>
+                </div>
               </li>
             );
           })
