@@ -306,7 +306,7 @@ function ExerciseCard({
 
   return (
     <details className="group w-full rounded-2xl border border-slate-200 bg-white/90 shadow-sm transition hover:border-brand-primary/40 hover:shadow-md">
-      <summary className="flex w-full cursor-pointer select-none flex-col gap-3 rounded-2xl px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/50 sm:flex-row sm:items-center sm:justify-between">
+      <summary className="flex w-full cursor-pointer select-none flex-col gap-2.5 rounded-2xl px-3 py-2.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/50 sm:flex-row sm:items-center sm:justify-between sm:px-4">
         <div className="flex w-full flex-col gap-2">
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col gap-1">
@@ -353,16 +353,16 @@ function ExerciseCard({
         </span>
       </summary>
 
-      <div className="grid w-full gap-4 border-t border-slate-200 px-4 pb-4 pt-3">
-        <details className="group rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3 text-sm shadow-inner">
+      <div className="grid w-full gap-4 border-t border-slate-200 px-3 pb-4 pt-3 sm:px-4">
+        <details className="group rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-3 text-sm shadow-inner sm:px-4">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-slate-700 transition group-open:text-brand-primary">
             Plan de trabajo
             <span className="text-xs font-medium uppercase tracking-wide text-slate-400 group-open:text-brand-primary">
               ver detalles
             </span>
           </summary>
-          <div className="mt-3 space-y-3 text-sm text-slate-600">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="mt-2.5 space-y-3 text-sm text-slate-600">
+            <div className="grid gap-2 sm:grid-cols-2">
               <div>
                 <p className="text-xs uppercase tracking-wide text-slate-400">
                   Objetivo
@@ -473,7 +473,7 @@ function ExerciseCard({
       <footer className="mt-4 grid gap-4 border-t border-slate-200 pt-4">
         <form
           onSubmit={handleSubmit}
-          className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3 sm:grid-cols-4 sm:items-end"
+          className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3 sm:grid-cols-4 sm:items-end sm:p-4"
         >
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-slate-600">Carga / Peso</span>
@@ -554,7 +554,7 @@ function ExerciseCard({
           </div>
         </form>
 
-        <div className="rounded-xl border border-slate-200 bg-white/80 p-3">
+        <div className="rounded-xl border border-slate-200 bg-white/80 p-3 sm:p-4">
           <h4 className="text-sm font-semibold text-slate-700">
             Historial reciente
           </h4>
@@ -699,7 +699,7 @@ function TrainingHero({
     : null;
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-sm">
+    <section className="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
@@ -726,8 +726,8 @@ function TrainingHero({
           ) : null}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+        <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3 sm:p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Progreso de hoy
             </p>
@@ -747,7 +747,7 @@ function TrainingHero({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3 sm:p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Microciclo activo
             </p>
@@ -760,7 +760,7 @@ function TrainingHero({
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3 sm:p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Último registro
             </p>
@@ -795,8 +795,8 @@ function PlanSelector({
   onSelectSheet,
 }: PlanSelectorProps) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-sm">
-      <div className="flex flex-col gap-3">
+    <section className="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-2.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-slate-700">
             Entrenamientos disponibles
@@ -814,7 +814,7 @@ function PlanSelector({
                 type="button"
                 onClick={() => onSelectSheet(sheet)}
                 className={
-                  "rounded-full border px-4 py-2 text-sm font-medium transition " +
+                  "rounded-full border px-3 py-2 text-sm font-medium transition " +
                   (isActive
                     ? "border-brand-primary bg-brand-primary text-white shadow"
                     : "border-slate-200 bg-white text-slate-600 hover:border-brand-primary/40 hover:text-brand-primary")
@@ -846,8 +846,8 @@ function MicroSelector({
   totalExercises,
 }: MicroSelectorProps) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-sm">
-      <div className="flex flex-col gap-3">
+    <section className="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-2.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-col">
             <h2 className="text-sm font-semibold text-slate-700">
@@ -867,7 +867,7 @@ function MicroSelector({
                 type="button"
                 onClick={() => onSelectIndex(index)}
                 className={
-                  "rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide transition " +
+                  "rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
                   (isActive
                     ? "bg-brand-primary text-white shadow"
                     : "bg-slate-100 text-slate-600 hover:bg-brand-primary/10 hover:text-brand-primary")
@@ -889,9 +889,9 @@ interface WarmupSectionProps {
 
 function WarmupSection({ warmups }: WarmupSectionProps) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-sm">
+    <section className="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm sm:p-5">
       <h2 className="text-lg font-semibold text-slate-900">Calentamiento</h2>
-      <ul className="mt-4 space-y-3 text-sm text-slate-600">
+      <ul className="mt-3 space-y-3 text-sm text-slate-600">
         {warmups.map((warmup, index) => (
           <li
             key={`${warmup.description}-${index}`}
@@ -998,7 +998,7 @@ export default function TrainingPlanner({ trainings }: TrainingPlannerProps) {
 
   return (
     <section className="w-full">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6 sm:px-6 lg:max-w-5xl lg:px-8">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 sm:py-5 sm:gap-6 sm:px-5 lg:max-w-5xl lg:px-8">
         <TrainingHero
           title={training.title}
           phase={training.phase}

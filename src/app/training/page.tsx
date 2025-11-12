@@ -12,7 +12,7 @@ async function loadTrainings(): Promise<TrainingMap> {
 export default async function TrainingPage() {
   const trainings = await loadTrainings();
   return (
-    <main className="space-y-6">
+    <main className="sm:space-y-6">
       <TrainingPlanner trainings={trainings} />
     </main>
   );
