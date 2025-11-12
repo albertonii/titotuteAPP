@@ -7,6 +7,7 @@ import {
   useState,
   type ChangeEvent,
   type FormEvent,
+  type SyntheticEvent,
 } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useAuthStore } from "@/lib/state/auth";
@@ -137,6 +138,8 @@ interface ExerciseCardProps {
   selectedIndex: number;
   userId?: string;
   onStatusChange?: (exerciseName: string, status: ExerciseStatus) => void;
+  isActive?: boolean;
+  onToggle?: (exerciseName: string, isOpen: boolean) => void;
 }
 
 function ExerciseCard({
@@ -145,6 +148,8 @@ function ExerciseCard({
   selectedIndex,
   userId,
   onStatusChange,
+  isActive,
+  onToggle,
 }: ExerciseCardProps) {
   const [form, setForm] = useState<ExerciseLogFormState>({
     load: "",
@@ -170,6 +175,21 @@ function ExerciseCard({
       lastLog.microcycle === microcycle && isSameLocalDay(lastLog.performed_at)
     );
   }, [lastLog, microcycle]);
+
+  const handleDetailsToggle = (event: SyntheticEvent<HTMLDetailsElement>) => {
+    const isOpen = (event.target as HTMLDetailsElement).open;
+    onToggle?.(exercise.name, isOpen);
+  };
+
+  let cardTone =
+    "group w-full rounded-2xl border border-slate-200 bg-white/90 shadow-sm transition hover:border-brand-primary/40 hover:shadow-md";
+  if (isCompletedToday) {
+    cardTone += " border-emerald-200 bg-emerald-50/80";
+  }
+  if (isActive) {
+    cardTone +=
+      " border-brand-primary/70 bg-brand-primary/10 ring-2 ring-brand-primary/15";
+  }
 
   useEffect(() => {
     if (!onStatusChange) return;
@@ -212,6 +232,7 @@ function ExerciseCard({
       key: string;
       label: string;
       microcycle?: string | null;
+      isToday: boolean;
       entries: Array<{
         log: ExerciseLog;
         time: string;
@@ -220,6 +241,8 @@ function ExerciseCard({
           reps?: string | null;
           rir?: string | null;
         };
+        serie: number;
+        total: number;
       }>;
     }> = [];
 
@@ -233,6 +256,7 @@ function ExerciseCard({
           key,
           label: HISTORY_HEADER_FORMATTER.format(performedAt),
           microcycle: log.microcycle,
+          isToday: isSameLocalDay(log.performed_at),
           entries: [],
         };
         groups.push(group);
@@ -246,7 +270,18 @@ function ExerciseCard({
           reps: formatDelta(log.reps, previous?.reps),
           rir: formatDelta(log.rir, previous?.rir),
         },
+        serie: group.entries.length + 1,
+        total: group.entries.length + 1,
       });
+    });
+
+    groups.forEach((group) => {
+      const total = group.entries.length;
+      group.entries = group.entries.map((entry, idx) => ({
+        ...entry,
+        serie: idx + 1,
+        total,
+      }));
     });
 
     return groups;
@@ -305,7 +340,7 @@ function ExerciseCard({
   };
 
   return (
-    <details className="group w-full rounded-2xl border border-slate-200 bg-white/90 shadow-sm transition hover:border-brand-primary/40 hover:shadow-md">
+    <details className={cardTone} onToggle={handleDetailsToggle}>
       <summary className="flex w-full cursor-pointer select-none flex-col gap-2.5 rounded-2xl px-3 py-2.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/50 sm:flex-row sm:items-center sm:justify-between sm:px-4">
         <div className="flex w-full flex-col gap-2">
           <div className="flex items-start justify-between gap-3">
@@ -318,6 +353,11 @@ function ExerciseCard({
               </p>
             </div>
             <div className="flex flex-col items-end gap-2">
+              {isActive ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-primary/15 px-3 py-1 text-[11px] font-semibold text-brand-primary">
+                  ▶ En curso
+                </span>
+              ) : null}
               {isCompletedToday ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold text-emerald-600">
                   ✓ Registrado hoy
@@ -564,104 +604,122 @@ function ExerciseCard({
             </p>
           ) : groupedHistory.length > 0 ? (
             <div className="mt-3 flex flex-col gap-3 text-sm text-slate-600">
-              {groupedHistory.slice(0, 4).map((group) => (
-                <div
-                  key={group.key}
-                  className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-slate-700 capitalize">
-                      {group.label}
-                    </span>
-                    {group.microcycle ? (
-                      <span className="rounded-full bg-brand-primary/10 px-2 py-0.5 text-xs font-semibold text-brand-primary">
-                        {group.microcycle}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="mt-3 flex flex-col gap-3">
-                    {group.entries.map(({ log, time, deltas }) => (
-                      <div
-                        key={log.id}
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-2"
-                      >
-                        <div className="flex items-center justify-between text-xs text-slate-500">
-                          <span className="font-semibold text-slate-600">
-                            Sesión • {time}
+              {groupedHistory.slice(0, 4).map((group) => {
+                const dayLabel = group.isToday ? "Hoy" : group.label;
+                return (
+                  <div
+                    key={group.key}
+                    className={`rounded-xl border px-3 py-3 ${
+                      group.isToday
+                        ? "border-brand-primary/60 bg-brand-primary/10"
+                        : "border-slate-100 bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-slate-700 capitalize">
+                          {dayLabel}
+                        </span>
+                        {group.microcycle ? (
+                          <span className="rounded-full bg-brand-primary/10 px-2 py-0.5 text-[11px] font-semibold text-brand-primary">
+                            {group.microcycle}
                           </span>
-                          {log.microcycle ? (
-                            <span className="text-[10px] uppercase tracking-wide text-slate-400">
-                              {log.microcycle}
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                          <div className="rounded-lg bg-slate-50 px-2 py-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                              Carga
-                            </p>
-                            <p className="text-sm font-semibold text-slate-700">
-                              {log.load ?? "—"}
-                            </p>
-                            {deltas.load ? (
-                              <p
-                                className={`text-xs font-semibold ${deltaTone(
-                                  deltas.load
-                                )}`}
-                              >
-                                {deltas.load}
-                              </p>
-                            ) : null}
-                          </div>
-                          <div className="rounded-lg bg-slate-50 px-2 py-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                              Reps / Indicaciones
-                            </p>
-                            <p className="text-sm font-semibold text-slate-700">
-                              {log.reps ?? "—"}
-                            </p>
-                            {deltas.reps ? (
-                              <p
-                                className={`text-xs font-semibold ${deltaTone(
-                                  deltas.reps
-                                )}`}
-                              >
-                                {deltas.reps}
-                              </p>
-                            ) : null}
-                          </div>
-                          <div className="rounded-lg bg-slate-50 px-2 py-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                              RIR / Sensación
-                            </p>
-                            <p className="text-sm font-semibold text-slate-700">
-                              {log.rir ?? "—"}
-                            </p>
-                            {deltas.rir ? (
-                              <p
-                                className={`text-xs font-semibold ${deltaTone(
-                                  deltas.rir
-                                )}`}
-                              >
-                                {deltas.rir}
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                        {log.notes ? (
-                          <p className="mt-2 text-xs italic text-slate-500">
-                            “
-                            {log.notes.length > 160
-                              ? `${log.notes.slice(0, 157)}…`
-                              : log.notes}
-                            ”
-                          </p>
                         ) : null}
                       </div>
-                    ))}
+                      <span className="text-xs text-slate-400">
+                        {group.entries.length} registro
+                        {group.entries.length > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-2.5">
+                      {group.entries.map(
+                        ({ log, time, deltas, serie, total }) => (
+                          <div
+                            key={log.id}
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-4"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600">
+                                {serie}
+                              </span>
+                              <div className="flex flex-col">
+                                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                  Serie {serie}/{total}
+                                </span>
+                                <span className="text-sm font-semibold text-slate-700">
+                                  {time}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="mt-2 grid gap-2 text-xs text-slate-600 sm:mt-0 sm:w-auto sm:grid-cols-3 sm:gap-3">
+                              <div className="rounded-lg bg-slate-50 px-2 py-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                  Carga
+                                </p>
+                                <p className="text-sm font-semibold text-slate-700">
+                                  {log.load ?? "—"}
+                                </p>
+                                {deltas.load ? (
+                                  <p
+                                    className={`text-xs font-semibold ${deltaTone(
+                                      deltas.load
+                                    )}`}
+                                  >
+                                    {deltas.load}
+                                  </p>
+                                ) : null}
+                              </div>
+                              <div className="rounded-lg bg-slate-50 px-2 py-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                  Reps / Indicaciones
+                                </p>
+                                <p className="text-sm font-semibold text-slate-700">
+                                  {log.reps ?? "—"}
+                                </p>
+                                {deltas.reps ? (
+                                  <p
+                                    className={`text-xs font-semibold ${deltaTone(
+                                      deltas.reps
+                                    )}`}
+                                  >
+                                    {deltas.reps}
+                                  </p>
+                                ) : null}
+                              </div>
+                              <div className="rounded-lg bg-slate-50 px-2 py-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                  RIR / Sensación
+                                </p>
+                                <p className="text-sm font-semibold text-slate-700">
+                                  {log.rir ?? "—"}
+                                </p>
+                                {deltas.rir ? (
+                                  <p
+                                    className={`text-xs font-semibold ${deltaTone(
+                                      deltas.rir
+                                    )}`}
+                                  >
+                                    {deltas.rir}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
+                            {log.notes ? (
+                              <p className="mt-2 text-xs italic text-slate-500 sm:mt-0 sm:max-w-xs">
+                                “
+                                {log.notes.length > 140
+                                  ? `${log.notes.slice(0, 137)}…`
+                                  : log.notes}
+                                ”
+                              </p>
+                            ) : null}
+                          </div>
+                        )
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="mt-2 text-sm text-slate-500">
@@ -936,6 +994,7 @@ export default function TrainingPlanner({ trainings }: TrainingPlannerProps) {
   const defaultSheet = sheetKeys[0] ?? "";
   const [selectedSheet, setSelectedSheet] = useState<string>(defaultSheet);
   const [selectedMicro, setSelectedMicro] = useState<number>(0);
+  const [activeExercise, setActiveExercise] = useState<string | null>(null);
   const { user } = useAuthStore();
   useAuthGuard({
     allowedRoles: ["athlete", "trainer", "admin", "nutritionist"],
@@ -1038,6 +1097,12 @@ export default function TrainingPlanner({ trainings }: TrainingPlannerProps) {
               selectedIndex={selectedMicro}
               userId={user?.id}
               onStatusChange={handleExerciseStatusChange}
+              isActive={activeExercise === exercise.name}
+              onToggle={(name, isOpen) => {
+                setActiveExercise((prev) =>
+                  isOpen ? name : prev === name ? null : prev
+                );
+              }}
             />
           ))}
         </section>
