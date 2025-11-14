@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useAuthStore } from "@/lib/state/auth";
 import { useAuthGuard } from "@/lib/hooks/useAuthGuard";
 import type { TrainingMap } from "@/types/training";
+import { getActiveTrainingPlan } from "@/lib/services/training";
 import { PlanSelector } from "./PlanSelector";
 import { MicroSelector } from "./MicroSelector";
 import { TrainingHero } from "./TrainingHero";
@@ -14,10 +15,13 @@ const STORAGE_SHEET_KEY = "training:selectedSheet";
 const STORAGE_MICRO_KEY = "training:selectedMicro";
 
 interface TrainingPlannerProps {
-  trainings: TrainingMap;
+  trainings?: TrainingMap; // Opcional ahora, se carga desde BD si no se proporciona
 }
 
-export default function TrainingPlanner({ trainings }: TrainingPlannerProps) {
+export default function TrainingPlanner({ trainings: initialTrainings }: TrainingPlannerProps) {
+  const { user } = useAuthStore();
+  const [trainings, setTrainings] = useState<TrainingMap>(initialTrainings || {});
+  const [loading, setLoading] = useState(!initialTrainings);
   const sheetKeys = useMemo(() => {
     const keys = Object.keys(trainings);
     const ordered = [
@@ -41,10 +45,51 @@ export default function TrainingPlanner({ trainings }: TrainingPlannerProps) {
   >({});
   const [activeExercise, setActiveExercise] = useState<string | null>(null);
 
-  const { user } = useAuthStore();
   useAuthGuard({
     allowedRoles: ["athlete", "trainer", "admin", "nutritionist"],
   });
+
+  // Cargar planificación activa desde la BD
+  useEffect(() => {
+    const loadActiveTraining = async () => {
+      if (!user?.id) return;
+      
+      try {
+        // Cargar el JSON base como fallback
+        const response = await fetch("/data/trainings.json");
+        if (!response.ok) {
+          throw new Error("No se pudo cargar el plan base");
+        }
+        const baseTrainings: TrainingMap = await response.json();
+        
+        // Obtener la planificación activa del usuario
+        const activeTrainings = await getActiveTrainingPlan(user.id, baseTrainings);
+        setTrainings(activeTrainings);
+      } catch (error) {
+        console.error("Error cargando planificación activa:", error);
+        // Si hay error, usar los entrenamientos iniciales o el JSON base
+        if (initialTrainings) {
+          setTrainings(initialTrainings);
+        } else {
+          try {
+            const response = await fetch("/data/trainings.json");
+            const baseTrainings: TrainingMap = await response.json();
+            setTrainings(baseTrainings);
+          } catch (e) {
+            console.error("Error cargando JSON base:", e);
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (!initialTrainings) {
+      loadActiveTraining();
+    } else {
+      setLoading(false);
+    }
+  }, [user?.id, initialTrainings]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -112,15 +157,8 @@ export default function TrainingPlanner({ trainings }: TrainingPlannerProps) {
     []
   );
 
-  if (!training) {
-    return (
-      <p className="text-sm text-slate-500">
-        No se encontró información de entrenamientos.
-      </p>
-    );
-  }
-
-  const totalExercises = training.exercises.length;
+  // Todos los hooks deben estar antes de cualquier return condicional
+  const totalExercises = training?.exercises.length ?? 0;
   const completedExercises = useMemo(() => {
     return Object.values(exerciseStatuses).filter((status) => status.completed)
       .length;
@@ -135,8 +173,32 @@ export default function TrainingPlanner({ trainings }: TrainingPlannerProps) {
     return new Date(Math.max(...timestamps)).toISOString();
   }, [exerciseStatuses]);
 
-  const selectedMicrocycleLabel =
-    training.microcycles[selectedMicro] ?? training.microcycles[0] ?? "";
+  const selectedMicrocycleLabel = useMemo(() => {
+    if (!training) return "";
+    return training.microcycles[selectedMicro] ?? training.microcycles[0] ?? "";
+  }, [training, selectedMicro]);
+
+  // Ahora sí, los returns condicionales después de todos los hooks
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <p className="text-sm text-slate-500">Cargando planificación...</p>
+      </div>
+    );
+  }
+
+  if (!training || Object.keys(trainings).length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
+        <p className="text-sm font-medium text-slate-900">
+          No hay planificación activa asignada
+        </p>
+        <p className="text-xs text-slate-500">
+          Contacta con tu entrenador para que te asigne una planificación activa.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <section className="w-full">

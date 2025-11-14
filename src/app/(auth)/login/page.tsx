@@ -1,11 +1,12 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/lib/state/auth";
 
 export default function LoginPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { signIn, status, error, user } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,22 +26,32 @@ export default function LoginPage() {
 
   const destination = useMemo(() => {
     if (!user) return "/";
+    // Intentar usar la última ruta visitada desde localStorage
+    if (typeof window !== "undefined") {
+      const lastPath = window.localStorage.getItem("navigation:last");
+      if (lastPath && lastPath !== "/login" && lastPath !== "/") {
+        return lastPath;
+      }
+    }
+    // Fallback a rutas por defecto según rol
     switch (user.role) {
       case "trainer":
         return "/coach";
       case "nutritionist":
       case "admin":
-        return "/sync";
+        return "/admin"; // Cambiar de /sync a /admin como default
       default:
         return "/athlete";
     }
   }, [user]);
 
   useEffect(() => {
-    if (status === "authenticated" && user) {
+    // Solo redirigir si estamos en la página de login y el usuario se autenticó
+    // Esto evita redirecciones no deseadas cuando se recarga otra página
+    if (pathname === "/login" && status === "authenticated" && user) {
       router.replace(destination);
     }
-  }, [status, user, destination, router]);
+  }, [pathname, status, user, destination, router]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();

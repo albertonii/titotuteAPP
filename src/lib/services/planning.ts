@@ -406,3 +406,113 @@ export const deleteSessionPlan = async (id: string) => {
   await db.sessions.delete(id);
   await enqueue("sessions", { id }, "delete");
 };
+
+// Planning Assignments
+export interface PlanningAssignmentInput {
+  user_id: string;
+  macrocycle_id: string;
+  is_active?: boolean;
+  assigned_by?: string | null;
+}
+
+export const assignPlanningToUser = async (
+  input: PlanningAssignmentInput
+) => {
+  const existing = await db.planning_assignments
+    .where("[user_id+macrocycle_id]")
+    .equals([input.user_id, input.macrocycle_id])
+    .first();
+
+  const assignment = {
+    id: existing?.id ?? crypto.randomUUID(),
+    user_id: input.user_id,
+    macrocycle_id: input.macrocycle_id,
+    is_active: input.is_active ?? false,
+    assigned_at: existing?.assigned_at ?? nowIso(),
+    assigned_by: input.assigned_by ?? null,
+    updated_at: nowIso(),
+  };
+
+  await db.planning_assignments.put(assignment);
+  await enqueue("planning_assignments", assignment, existing ? "update" : "insert");
+  return assignment;
+};
+
+export const setActivePlanning = async (
+  user_id: string,
+  macrocycle_id: string
+) => {
+  // Desactivar todas las asignaciones activas del usuario
+  const activeAssignments = await db.planning_assignments
+    .where("user_id")
+    .equals(user_id)
+    .filter((a) => a.is_active)
+    .toArray();
+
+  for (const assignment of activeAssignments) {
+    const updated = { ...assignment, is_active: false, updated_at: nowIso() };
+    await db.planning_assignments.put(updated);
+    await enqueue("planning_assignments", updated, "update");
+  }
+
+  // Activar la asignación especificada
+  const assignment = await db.planning_assignments
+    .where("[user_id+macrocycle_id]")
+    .equals([user_id, macrocycle_id])
+    .first();
+
+  if (assignment) {
+    const updated = { ...assignment, is_active: true, updated_at: nowIso() };
+    await db.planning_assignments.put(updated);
+    await enqueue("planning_assignments", updated, "update");
+    return updated;
+  }
+
+  // Si no existe, crearla
+  return await assignPlanningToUser({
+    user_id,
+    macrocycle_id,
+    is_active: true,
+  });
+};
+
+export const listPlanningAssignments = async () => {
+  return db.planning_assignments.toArray();
+};
+
+export const listAssignmentsByUser = async (user_id: string) => {
+  return db.planning_assignments
+    .where("user_id")
+    .equals(user_id)
+    .toArray();
+};
+
+export const listAssignmentsByMacrocycle = async (macrocycle_id: string) => {
+  return db.planning_assignments
+    .where("macrocycle_id")
+    .equals(macrocycle_id)
+    .toArray();
+};
+
+export const getActivePlanningForUser = async (user_id: string) => {
+  return db.planning_assignments
+    .where("user_id")
+    .equals(user_id)
+    .filter((a) => a.is_active)
+    .first();
+};
+
+export const removePlanningAssignment = async (
+  user_id: string,
+  macrocycle_id: string
+) => {
+  const assignment = await db.planning_assignments
+    .where("[user_id+macrocycle_id]")
+    .equals([user_id, macrocycle_id])
+    .first();
+
+  if (assignment) {
+    await db.planning_assignments.delete(assignment.id);
+    await enqueue("planning_assignments", { id: assignment.id }, "delete");
+  }
+};

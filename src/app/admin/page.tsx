@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { type User, type UserRole } from "@/lib/db-local/db";
 import { useAuthGuard } from "@/lib/hooks/useAuthGuard";
 import {
@@ -14,7 +14,9 @@ import {
   queueCredentialInvite,
 } from "@/lib/sync/credentials";
 import { AdminPlanningManager } from "@/components/admin/planning/AdminPlanningManager";
+import { PlanningManagementList } from "@/components/admin/planning/PlanningManagementList";
 import { useAuthStore } from "@/lib/state/auth";
+import type { Macrocycle } from "@/lib/db-local/db";
 
 const roles: UserRole[] = ["trainer", "athlete", "nutritionist", "admin"];
 
@@ -52,7 +54,16 @@ export default function AdminPage() {
   useAuthGuard({ allowedRoles: ["admin", "trainer"] });
   const authUser = useAuthStore((state) => state.user);
   const isAdmin = authUser?.role === "admin";
-  const [activeTab, setActiveTab] = useState<"planning" | "users">("planning");
+  
+  // Inicializar pestaña activa desde localStorage
+  const [activeTab, setActiveTab] = useState<"planning" | "management" | "users">(() => {
+    if (typeof window === "undefined") return "planning";
+    const stored = window.localStorage.getItem("admin:activeTab");
+    if (stored === "planning" || stored === "management" || stored === "users") {
+      return stored;
+    }
+    return "planning";
+  });
   const [users, setUsers] = useState<User[]>([]);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [pendingCredentials, setPendingCredentials] = useState<
@@ -167,11 +178,36 @@ export default function AdminPage() {
     }));
   }, [users]);
 
+  // Guardar pestaña activa en localStorage cuando cambia
   useEffect(() => {
-    if (!isAdmin && activeTab === "users") {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("admin:activeTab", activeTab);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!isAdmin && (activeTab === "users" || activeTab === "management")) {
       setActiveTab("planning");
     }
   }, [activeTab, isAdmin]);
+
+  // Función para cambiar pestaña que también guarda en localStorage
+  const handleTabChange = (tab: "planning" | "management" | "users") => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("admin:activeTab", tab);
+    }
+  };
+
+  const planningManagerRef = useRef<{ editMacrocycle: (macrocycle: Macrocycle) => void } | null>(null);
+
+  const handleEditPlanning = (macrocycle: Macrocycle) => {
+    setActiveTab("planning");
+    // Usar setTimeout para asegurar que el componente se haya montado
+    setTimeout(() => {
+      planningManagerRef.current?.editMacrocycle(macrocycle);
+    }, 100);
+  };
 
   const userManagementSection = (
     <section className="flex flex-col gap-6">
@@ -368,7 +404,7 @@ export default function AdminPage() {
         <div className="flex items-center gap-2 rounded-full bg-slate-100 p-1 text-xs font-medium text-slate-600">
           <button
             type="button"
-            onClick={() => setActiveTab("planning")}
+            onClick={() => handleTabChange("planning")}
             className={`rounded-full px-3 py-1 transition ${
               activeTab === "planning"
                 ? "bg-white text-slate-900 shadow-sm"
@@ -379,7 +415,18 @@ export default function AdminPage() {
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("users")}
+            onClick={() => handleTabChange("management")}
+            className={`rounded-full px-3 py-1 transition ${
+              activeTab === "management"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "hover:text-slate-900"
+            }`}
+          >
+            Gestión
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("users")}
             className={`rounded-full px-3 py-1 transition ${
               activeTab === "users"
                 ? "bg-white text-slate-900 shadow-sm"
@@ -391,7 +438,12 @@ export default function AdminPage() {
         </div>
       ) : null}
 
-      {activeTab === "planning" ? <AdminPlanningManager /> : null}
+      {activeTab === "planning" ? (
+        <AdminPlanningManager ref={planningManagerRef} />
+      ) : null}
+      {activeTab === "management" ? (
+        <PlanningManagementList onEdit={handleEditPlanning} />
+      ) : null}
       {isAdmin && activeTab === "users" ? userManagementSection : null}
     </section>
   );

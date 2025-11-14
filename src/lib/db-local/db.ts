@@ -170,6 +170,16 @@ export interface NutritionProfile {
   updated_at: string;
 }
 
+export interface PlanningAssignment {
+  id: string;
+  user_id: string;
+  macrocycle_id: string;
+  is_active: boolean;
+  assigned_at: string;
+  assigned_by?: string | null;
+  updated_at: string;
+}
+
 class LocalDatabase extends Dexie {
   users!: Table<User>;
   macrocycles!: Table<Macrocycle>;
@@ -185,6 +195,7 @@ class LocalDatabase extends Dexie {
   exercise_logs!: Table<ExerciseLog>;
   injury_logs!: Table<InjuryLog>;
   nutrition_profiles!: Table<NutritionProfile>;
+  planning_assignments!: Table<PlanningAssignment>;
 
   constructor() {
     super("tito_tute_local");
@@ -260,6 +271,14 @@ class LocalDatabase extends Dexie {
     this.version(6).stores({
       pending_credentials: "id, email, role, user_id, created_at",
     });
+
+    this.version(7)
+      .stores({
+        planning_assignments: "id, [user_id+macrocycle_id], user_id, macrocycle_id, is_active, assigned_at, updated_at",
+      })
+      .upgrade(async (tx) => {
+        // Migración automática si es necesario
+      });
   }
 }
 

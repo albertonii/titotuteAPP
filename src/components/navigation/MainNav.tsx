@@ -11,12 +11,15 @@ import { useAuthStore } from "@/lib/state/auth";
 
 export function MainNav() {
   const pathname = usePathname();
-  const [activePath, setActivePath] = useState<string>("/");
   const { status, queueCount } = useSyncStore((state) => ({
     status: state.status,
     queueCount: state.queueCount,
   }));
   const user = useAuthStore((state) => state.user);
+
+  // Siempre inicializar con el pathname actual (no localStorage)
+  // El localStorage solo se usa para mantener el estado visual, no para redirigir
+  const [activePath, setActivePath] = useState<string>(pathname);
 
   const statusLabel = (() => {
     switch (status) {
@@ -80,22 +83,16 @@ export function MainNav() {
     return base;
   };
 
+  // Sincronizar pathname actual con el estado
+  // El pathname siempre tiene prioridad sobre localStorage
   useEffect(() => {
+    setActivePath(pathname);
+    
+    // Guardar en localStorage solo para referencia, pero no usarlo para redirigir
     if (typeof window !== "undefined") {
       window.localStorage.setItem("navigation:last", pathname);
     }
-    setActivePath(pathname);
   }, [pathname]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem("navigation:last");
-    if (stored) {
-      setActivePath(stored);
-    } else {
-      setActivePath(pathname);
-    }
-  }, []);
 
   const links = useMemo(() => navigationLinks(), [user?.role]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useImperativeHandle, useMemo, useState, forwardRef } from "react";
 import {
   db,
   type Macrocycle,
@@ -125,7 +125,11 @@ const DEFAULT_SESSION_FORM: SessionFormState = {
   notes: "",
 };
 
-export function AdminPlanningManager() {
+export interface AdminPlanningManagerRef {
+  editMacrocycle: (macrocycle: Macrocycle) => void;
+}
+
+export const AdminPlanningManager = forwardRef<AdminPlanningManagerRef, {}>((props, ref) => {
   const user = useAuthStore((state) => state.user);
   const [macrocycles, setMacrocycles] = useState<Macrocycle[]>([]);
   const [mesocycles, setMesocycles] = useState<Mesocycle[]>([]);
@@ -564,7 +568,7 @@ export function AdminPlanningManager() {
     }
   };
 
-  const startMacroEdit = (macrocycle: Macrocycle) => {
+  const startMacroEdit = useCallback((macrocycle: Macrocycle) => {
     setEditingMacroId(macrocycle.id);
     setMacroForm({
       name: macrocycle.name,
@@ -576,7 +580,11 @@ export function AdminPlanningManager() {
       status: macrocycle.status,
     });
     setEditor({ type: "macrocycle", mode: "edit" });
-  };
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    editMacrocycle: startMacroEdit,
+  }));
 
   const startMesocycleEdit = (mesocycle: Mesocycle) => {
     setEditingMesocycleId(mesocycle.id);
@@ -1103,4 +1111,6 @@ export function AdminPlanningManager() {
       </PlanningModal>
     </>
   );
-}
+});
+
+AdminPlanningManager.displayName = "AdminPlanningManager";
