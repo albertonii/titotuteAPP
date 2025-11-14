@@ -55,15 +55,10 @@ export default function AdminPage() {
   const authUser = useAuthStore((state) => state.user);
   const isAdmin = authUser?.role === "admin";
   
-  // Inicializar pestaña activa desde localStorage
-  const [activeTab, setActiveTab] = useState<"planning" | "management" | "users">(() => {
-    if (typeof window === "undefined") return "planning";
-    const stored = window.localStorage.getItem("admin:activeTab");
-    if (stored === "planning" || stored === "management" || stored === "users") {
-      return stored;
-    }
-    return "planning";
-  });
+  // Inicializar siempre con el mismo valor para evitar problemas de hidratación
+  // El valor se actualizará desde localStorage después de la hidratación
+  const [activeTab, setActiveTab] = useState<"planning" | "management" | "users">("planning");
+  const [isMounted, setIsMounted] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [pendingCredentials, setPendingCredentials] = useState<
@@ -178,12 +173,20 @@ export default function AdminPage() {
     }));
   }, [users]);
 
-  // Guardar pestaña activa en localStorage cuando cambia
+  // Cargar pestaña activa desde localStorage después de la hidratación
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("admin:activeTab", activeTab);
+    setIsMounted(true);
+    const stored = window.localStorage.getItem("admin:activeTab");
+    if (stored === "planning" || stored === "management" || stored === "users") {
+      setActiveTab(stored);
     }
-  }, [activeTab]);
+  }, []);
+
+  // Guardar pestaña activa en localStorage cuando cambia (solo después de montar)
+  useEffect(() => {
+    if (!isMounted) return;
+    window.localStorage.setItem("admin:activeTab", activeTab);
+  }, [activeTab, isMounted]);
 
   useEffect(() => {
     if (!isAdmin && (activeTab === "users" || activeTab === "management")) {
@@ -194,7 +197,8 @@ export default function AdminPage() {
   // Función para cambiar pestaña que también guarda en localStorage
   const handleTabChange = (tab: "planning" | "management" | "users") => {
     setActiveTab(tab);
-    if (typeof window !== "undefined") {
+    // No necesitamos verificar window aquí porque solo se llama desde eventos del cliente
+    if (isMounted) {
       window.localStorage.setItem("admin:activeTab", tab);
     }
   };

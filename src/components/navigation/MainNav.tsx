@@ -17,11 +17,34 @@ export function MainNav() {
   }));
   const user = useAuthStore((state) => state.user);
 
-  // Siempre inicializar con el pathname actual (no localStorage)
-  // El localStorage solo se usa para mantener el estado visual, no para redirigir
+  // Inicializar con pathname para evitar problemas de hidratación
+  // El estado se sincronizará en el useEffect después de la hidratación
   const [activePath, setActivePath] = useState<string>(pathname);
+  const [isMounted, setIsMounted] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  const statusLabel = (() => {
+  // Detectar cuando los stores de Zustand se han hidratado
+  useEffect(() => {
+    const checkHydration = () => {
+      const hydrated = useAuthStore.persist?.hasHydrated?.() ?? false;
+      setIsHydrated(hydrated);
+    };
+
+    // Verificar inmediatamente
+    checkHydration();
+
+    // Suscribirse a eventos de hidratación
+    const unsubFinish = useAuthStore.persist?.onFinishHydration?.(() => {
+      setIsHydrated(true);
+    });
+
+    return () => {
+      unsubFinish?.();
+    };
+  }, []);
+
+  // Usar useMemo para evitar recálculos y problemas de hidratación
+  const statusLabel = useMemo(() => {
     switch (status) {
       case "syncing":
         return `Sincronizando… (${queueCount})`;
@@ -32,9 +55,9 @@ export function MainNav() {
       default:
         return queueCount > 0 ? `Pendiente · ${queueCount}` : "Todo al día";
     }
-  })();
+  }, [status, queueCount]);
 
-  const statusStyle = (() => {
+  const statusStyle = useMemo(() => {
     switch (status) {
       case "offline":
         return "text-amber-600";
@@ -45,10 +68,15 @@ export function MainNav() {
       default:
         return "text-slate-500";
     }
-  })();
+  }, [status]);
 
-  const navigationLinks = () => {
+  const navigationLinks = useMemo(() => {
     const base = [{ href: "/", label: "Inicio" }];
+
+    // Si no está hidratado, devolver solo el link base
+    if (!isHydrated) {
+      return base;
+    }
 
     if (user?.role === "athlete") {
       return [
@@ -81,20 +109,25 @@ export function MainNav() {
 
     // invitado / sin rol
     return base;
-  };
+  }, [user?.role, isHydrated]);
 
-  // Sincronizar pathname actual con el estado
-  // El pathname siempre tiene prioridad sobre localStorage
+  // Marcar como montado después de la hidratación
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Sincronizar pathname actual con el estado después de la hidratación
+  useEffect(() => {
+    if (!isMounted) return;
+    
     setActivePath(pathname);
     
     // Guardar en localStorage solo para referencia, pero no usarlo para redirigir
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("navigation:last", pathname);
-    }
-  }, [pathname]);
+    window.localStorage.setItem("navigation:last", pathname);
+  }, [pathname, isMounted]);
 
-  const links = useMemo(() => navigationLinks(), [user?.role]);
+  // navigationLinks ya está calculado con useMemo y considera isHydrated
+  const links = navigationLinks;
 
   return (
     <nav className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between">
@@ -121,7 +154,10 @@ export function MainNav() {
             />
           </div>
         </div>
-        <span className={`text-xs ${statusStyle}`}>{statusLabel}</span>
+        {/* Solo mostrar estado de sync después de la hidratación */}
+        {isHydrated && (
+          <span className={`text-xs ${statusStyle}`}>{statusLabel}</span>
+        )}
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
         <ul className="flex items-center gap-3 overflow-x-auto">

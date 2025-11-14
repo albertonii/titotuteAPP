@@ -1,10 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "@/lib/state/auth";
 
 export function AppFooter() {
   const { user } = useAuthStore();
+  const [currentDate, setCurrentDate] = useState<string>("");
+
+  // Evitar problemas de hidratación calculando la fecha solo en el cliente
+  useEffect(() => {
+    setCurrentDate(
+      new Date().toLocaleDateString("es-AR", {
+        year: "numeric",
+        month: "short",
+      })
+    );
+  }, []);
 
   return (
     <footer className="mt-10 flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white/90 px-5 py-6 text-sm text-slate-500 shadow-sm sm:flex-row sm:items-center sm:justify-between">
@@ -39,11 +51,7 @@ export function AppFooter() {
           o contacta con tu administrador.
         </p>
         <p className="text-[11px] text-slate-400">
-          Última versión ·{" "}
-          {new Date().toLocaleDateString("es-AR", {
-            year: "numeric",
-            month: "short",
-          })}
+          Última versión · {currentDate || "2024"}
         </p>
       </div>
     </footer>

@@ -22,7 +22,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className={`${figtree.className} bg-slate-50 text-slate-900`}>
+      <body
+        className={`${figtree.className} bg-slate-50 text-slate-900`}
+        suppressHydrationWarning>
         <Providers>
           <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-3 py-6 sm:px-6">
             <MainNav />
