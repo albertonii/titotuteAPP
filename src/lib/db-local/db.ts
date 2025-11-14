@@ -180,6 +180,47 @@ export interface PlanningAssignment {
   updated_at: string;
 }
 
+export interface SessionWarmup {
+  id: string;
+  session_id: string;
+  description: string;
+  resource?: string | null;
+  order_index: number;
+  updated_at: string;
+}
+
+export interface SessionExercise {
+  id: string;
+  session_id: string;
+  exercise_name: string;
+  order_index: number;
+  rest?: string | null; // Descanso general
+  rest_by_microcycle?: string | null; // JSON stringified: {"1º": "60\" a 90\"", "2º": "90\""}
+  video_resource?: string | null; // Link a video del ejercicio
+  general_instructions?: string | null; // Instrucciones generales
+  warnings?: string | null; // Advertencias importantes
+  notes_json?: string | null; // JSON stringified: todas las notas (array de arrays)
+  header_json?: string | null; // JSON stringified: header con información de series
+  exercise_variations?: string | null; // JSON stringified: variaciones por microciclo
+  updated_at: string;
+}
+
+export interface ExerciseSeries {
+  id: string;
+  session_exercise_id: string;
+  series_number: number;
+  series_label?: string | null; // Etiqueta completa (ej: "1ª Serie (60kg)")
+  microcycle_name?: string | null;
+  load?: string | null;
+  reps?: string | null;
+  rir?: string | null;
+  notes?: string | null;
+  rest?: string | null;
+  special_instructions?: string | null; // Instrucciones especiales
+  exercise_variation?: string | null; // Variación específica
+  updated_at: string;
+}
+
 class LocalDatabase extends Dexie {
   users!: Table<User>;
   macrocycles!: Table<Macrocycle>;
@@ -196,6 +237,9 @@ class LocalDatabase extends Dexie {
   injury_logs!: Table<InjuryLog>;
   nutrition_profiles!: Table<NutritionProfile>;
   planning_assignments!: Table<PlanningAssignment>;
+  session_warmups!: Table<SessionWarmup>;
+  session_exercises!: Table<SessionExercise>;
+  exercise_series!: Table<ExerciseSeries>;
 
   constructor() {
     super("tito_tute_local");
@@ -275,6 +319,16 @@ class LocalDatabase extends Dexie {
     this.version(7)
       .stores({
         planning_assignments: "id, [user_id+macrocycle_id], user_id, macrocycle_id, is_active, assigned_at, updated_at",
+      })
+      .upgrade(async (tx) => {
+        // Migración automática si es necesario
+      });
+
+    this.version(8)
+      .stores({
+        session_warmups: "id, session_id, order_index, updated_at",
+        session_exercises: "id, session_id, exercise_name, order_index, updated_at",
+        exercise_series: "id, session_exercise_id, series_number, microcycle_name, updated_at",
       })
       .upgrade(async (tx) => {
         // Migración automática si es necesario

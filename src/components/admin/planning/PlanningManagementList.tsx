@@ -48,6 +48,9 @@ export function PlanningManagementList({
     string | null
   >(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [currentUserActiveMacrocycleId, setCurrentUserActiveMacrocycleId] = useState<
+    string | null
+  >(null);
 
   const refreshData = useCallback(async () => {
     const [macros, assigns, userList] = await Promise.all([
@@ -58,7 +61,15 @@ export function PlanningManagementList({
     setMacrocycles(macros);
     setAssignments(assigns);
     setUsers(userList.filter((u) => u.role === "athlete"));
-  }, []);
+    
+    // Obtener el macrociclo activo del usuario actual
+    if (user?.id) {
+      const activePlanning = await getActivePlanningForUser(user.id);
+      setCurrentUserActiveMacrocycleId(activePlanning?.macrocycle_id ?? null);
+    } else {
+      setCurrentUserActiveMacrocycleId(null);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     refreshData();
@@ -71,7 +82,7 @@ export function PlanningManagementList({
   }, [feedback]);
 
   const planningWithAssignments = useMemo<PlanningWithAssignments[]>(() => {
-    return macrocycles.map((macro) => {
+    const mapped = macrocycles.map((macro) => {
       const macroAssignments = assignments.filter(
         (a) => a.macrocycle_id === macro.id
       );
@@ -86,7 +97,16 @@ export function PlanningManagementList({
         activeUsers: users.filter((u) => activeUserIds.includes(u.id)),
       };
     });
-  }, [macrocycles, assignments, users]);
+    
+    // Ordenar: primero el macrociclo activo del usuario actual, luego los demás
+    return mapped.sort((a, b) => {
+      const aIsCurrentUserActive = a.id === currentUserActiveMacrocycleId;
+      const bIsCurrentUserActive = b.id === currentUserActiveMacrocycleId;
+      if (aIsCurrentUserActive && !bIsCurrentUserActive) return -1;
+      if (!aIsCurrentUserActive && bIsCurrentUserActive) return 1;
+      return 0;
+    });
+  }, [macrocycles, assignments, users, currentUserActiveMacrocycleId]);
 
   const handleAssignPlanning = async () => {
     if (!selectedMacrocycleId || !selectedUserId) {
@@ -236,7 +256,11 @@ export function PlanningManagementList({
           planningWithAssignments.map((planning) => (
             <div
               key={planning.id}
-              className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+              className={`rounded-xl border p-4 shadow-sm ${
+                planning.id === currentUserActiveMacrocycleId
+                  ? "border-brand-primary bg-brand-primary/5"
+                  : "border-slate-200 bg-white"
+              }`}
             >
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div className="flex-1">
@@ -244,6 +268,11 @@ export function PlanningManagementList({
                     <h3 className="text-lg font-semibold text-slate-900">
                       {planning.name}
                     </h3>
+                    {planning.id === currentUserActiveMacrocycleId && (
+                      <span className="rounded-full bg-brand-primary px-2 py-0.5 text-[11px] font-medium text-white">
+                        Tu planificación activa
+                      </span>
+                    )}
                     <span
                       className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
                         planningStatusStyle[planning.status]
