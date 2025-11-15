@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TitoTute - Registra tu rendimiento</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 TitoTute</h1>
+            <p class="subtitle">Registra tu rendimiento académico</p>
+        </header>
+
+        <main>
+            <!-- Formulario de registro de rendimiento -->
+            <section class="registro-section">
+                <h2>Registrar Sesión de Estudio</h2>
+                <form id="performance-form">
+                    <div class="form-group">
+                        <label for="subject">Asignatura:</label>
+                        <input type="text" id="subject" name="subject" required placeholder="Ej: Matemáticas">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="topic">Tema estudiado:</label>
+                        <input type="text" id="topic" name="topic" required placeholder="Ej: Álgebra lineal">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="duration">Duración (minutos):</label>
+                        <input type="number" id="duration" name="duration" required min="1" placeholder="30">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="exercises">Ejercicios completados:</label>
+                        <input type="number" id="exercises" name="exercises" required min="0" placeholder="10">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="score">Calificación (0-10):</label>
+                        <input type="number" id="score" name="score" required min="0" max="10" step="0.1" placeholder="8.5">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes">Notas adicionales:</label>
+                        <textarea id="notes" name="notes" rows="3" placeholder="Observaciones sobre la sesión..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-primary">Guardar Rendimiento</button>
+                </form>
+            </section>
+
+            <!-- Lista de rendimientos registrados -->
+            <section class="historial-section">
+                <h2>Historial de Rendimiento</h2>
+                <div class="stats-summary">
+                    <div class="stat-card">
+                        <span class="stat-label">Sesiones totales</span>
+                        <span class="stat-value" id="total-sessions">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Tiempo total (min)</span>
+                        <span class="stat-value" id="total-time">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Promedio general</span>
+                        <span class="stat-value" id="average-score">0.0</span>
+                    </div>
+                </div>
+                <div id="performance-list" class="performance-list">
+                    <p class="empty-message">No hay registros aún. ¡Comienza registrando tu primera sesión!</p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 TitoTute - Tu compañero de estudio</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
